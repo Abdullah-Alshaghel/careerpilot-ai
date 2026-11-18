@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "careerpilot-api-gateway"
+version = "0.1.0"
+description = "Edge gateway/BFF: routing, CORS, correlation IDs, health aggregation. No business logic."
+requires-python = ">=3.10"
+dependencies = [
+    "careerpilot-common[redis,telemetry]",
+    "uvicorn[standard]==0.54.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

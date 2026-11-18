@@ -1,0 +1,8 @@
+# Local development / CI test environment for all Python packages.
+-e shared/python[postgres,redis,rabbitmq,telemetry]
+-e services/api-gateway
+-e services/identity-service
+pytest==9.2.0
+pytest-asyncio==1.5.0
+ruff==0.17.5
+jsonschema==4.25.1

@@ -1,0 +1,12 @@
+node_modules
+.venv
+.next
+dist
+target
+coverage
+package-lock.json
+apps/desktop/src-tauri/gen
+apps/desktop/src-tauri/icons
+tests/e2e/test-results
+tests/e2e/playwright-report
+*.md

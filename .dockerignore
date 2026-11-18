@@ -1,0 +1,15 @@
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.next
+**/dist
+**/target
+**/*.egg-info
+.git
+.env
+.env.*
+apps/
+packages/
+tests/e2e/

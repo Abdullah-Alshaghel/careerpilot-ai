@@ -1,0 +1,28 @@
+# Workspace-level Python tooling only. Each service/library has its own
+# pyproject.toml with its own dependencies.
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["node_modules", ".venv", "apps", "packages"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF"]
+ignore = ["RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S105", "S106"]
+"tests/**" = ["S101", "S105", "S106"]
+"**/migrations/**" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["careerpilot_common", "api_gateway", "identity_service"]
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib -ra"
+testpaths = ["shared/python/tests", "services", "tests/contract", "tests/integration"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: requires the docker compose stack (CAREERPILOT_INTEGRATION=1)",
+]

@@ -1,0 +1,53 @@
+/** English is the reference dictionary; every other locale must provide every key. */
+export const en = {
+  "app.name": "CareerPilot AI",
+  "app.tagline": "Your career workspace",
+  "nav.dashboard": "Dashboard",
+  "nav.systemStatus": "System status",
+  "locale.switchTo": "العربية",
+  "status.title": "Platform status",
+  "status.subtitle": "Connection to the CareerPilot backend",
+  "status.loading": "Checking connection…",
+  "status.ok": "All systems operational",
+  "status.degraded": "Some services are degraded",
+  "status.down": "Services unavailable",
+  "status.unreachable": "Cannot reach the backend",
+  "status.retry": "Retry",
+  "status.lastChecked": "Last checked {time}",
+  "status.gateway": "Gateway",
+  "status.version": "Version",
+  "status.check.up": "Up",
+  "status.check.down": "Down",
+  "status.latency": "{ms} ms",
+  "status.correlationId": "Reference: {id}",
+  "client.desktop": "Desktop app",
+  "client.web": "Web app",
+} as const;
+
+export type MessageKey = keyof typeof en;
+export type Messages = Record<MessageKey, string>;
+
+export const ar: Messages = {
+  "app.name": "CareerPilot AI",
+  "app.tagline": "مساحة عملك المهنية",
+  "nav.dashboard": "لوحة التحكم",
+  "nav.systemStatus": "حالة النظام",
+  "locale.switchTo": "English",
+  "status.title": "حالة المنصة",
+  "status.subtitle": "الاتصال بخوادم CareerPilot",
+  "status.loading": "جارٍ التحقق من الاتصال…",
+  "status.ok": "جميع الأنظمة تعمل",
+  "status.degraded": "بعض الخدمات متأثرة",
+  "status.down": "الخدمات غير متاحة",
+  "status.unreachable": "تعذّر الوصول إلى الخادم",
+  "status.retry": "إعادة المحاولة",
+  "status.lastChecked": "آخر تحقق {time}",
+  "status.gateway": "البوابة",
+  "status.version": "الإصدار",
+  "status.check.up": "يعمل",
+  "status.check.down": "متوقف",
+  "status.latency": "{ms} م.ث",
+  "status.correlationId": "المرجع: {id}",
+  "client.desktop": "تطبيق سطح المكتب",
+  "client.web": "تطبيق الويب",
+};

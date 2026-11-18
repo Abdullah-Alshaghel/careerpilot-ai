@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/health.v1.schema.json",
+  "title": "HealthResponse",
+  "description": "Response of GET /v1/health (gateway) and GET /health/{live,ready} (services).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["service", "version", "status", "timestamp", "checks"],
+  "properties": {
+    "service": { "type": "string", "maxLength": 64 },
+    "version": { "type": "string", "maxLength": 32 },
+    "status": { "enum": ["ok", "degraded", "down"] },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status", "latency_ms"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 64 },
+          "status": { "enum": ["up", "down"] },
+          "latency_ms": { "type": "number", "minimum": 0 },
+          "detail": { "type": ["string", "null"], "maxLength": 200 }
+        }
+      }
+    }
+  }
+}

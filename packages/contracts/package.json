@@ -1,0 +1,16 @@
+{
+  "name": "@careerpilot/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TypeScript API contract types. Mirrors shared/api-contracts JSON Schemas.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@careerpilot/config": "0.1.0"
+  }
+}

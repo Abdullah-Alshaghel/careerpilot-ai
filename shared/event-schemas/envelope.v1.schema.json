@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/events/envelope.v1.schema.json",
+  "title": "EventEnvelope",
+  "description": "Envelope for every message published to the careerpilot.events exchange. Routing key: <event_type>.v<schema_version>.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "correlation_id",
+    "aggregate_id",
+    "producer",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Idempotency key for consumers."
+    },
+    "event_type": {
+      "enum": [
+        "search.started",
+        "job.discovered",
+        "job.analyzed",
+        "job.matched",
+        "approval.requested",
+        "job.approved",
+        "job.rejected",
+        "application.package.generated",
+        "application.approved",
+        "application.submitted",
+        "application.status_changed",
+        "notification.requested"
+      ]
+    },
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "correlation_id": { "type": "string", "minLength": 8, "maxLength": 128 },
+    "aggregate_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "user_id": { "type": ["string", "null"], "format": "uuid" },
+    "producer": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "payload": { "type": "object" }
+  }
+}

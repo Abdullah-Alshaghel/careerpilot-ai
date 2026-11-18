@@ -1,0 +1,36 @@
+{
+  "name": "careerpilot-ai",
+  "private": true,
+  "description": "CareerPilot AI monorepo: Desktop (Tauri 2) + Web (Next.js) clients, shared TS packages, FastAPI services.",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "tests/e2e"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:web": "npm run dev -w @careerpilot/web",
+    "dev:desktop": "npm run tauri:dev -w @careerpilot/desktop",
+    "build:web": "npm run build -w @careerpilot/web",
+    "build:desktop": "npm run tauri:build -w @careerpilot/desktop",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run e2e -w @careerpilot/e2e",
+    "check:secrets": "node scripts/check-bundle-secrets.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.6",
+    "eslint": "10.15.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.73.0",
+    "vitest": "5.1.1"
+  }
+}

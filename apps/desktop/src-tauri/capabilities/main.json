@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-window",
+  "description": "Least privilege: the main window gets no IPC permissions in Phase 1. Add individual, scoped permissions only when a feature requires them, and extend tests/security.rs's allow-list in the same change.",
+  "windows": ["main"],
+  "permissions": []
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@careerpilot/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Typed API client shared by Desktop and Web. Validates every response at runtime.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@careerpilot/contracts": "0.1.0",
+    "@careerpilot/validation": "0.1.0",
+    "zod": "4.6.7"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.100.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@careerpilot/config": "0.1.0",
+    "@tanstack/react-query": "5.108.0",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "jsdom": "31.0.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}
