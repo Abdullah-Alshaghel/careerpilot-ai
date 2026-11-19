@@ -21,8 +21,9 @@ CareerPilot prepares applications. It never submits one without two explicit use
 ## Quick start
 
 ```bash
-# 1. Configuration: copy and replace every change-me value (URL-safe characters)
-cp .env.example .env
+# 1. Configuration: generates .env with random local secrets and a token signing key
+#    (existing .env from an earlier phase: python scripts/init-env.py --update)
+python scripts/init-env.py
 
 # 2. Backend: Postgres, Redis, RabbitMQ, S3 storage, migrations, identity-service, gateway
 docker compose up -d --build --wait
@@ -38,7 +39,7 @@ npm run dev:web
 npm run dev:desktop
 ```
 
-Both clients show **System status**, which is live connectivity to the gateway and each backend dependency, with an English/Arabic (RTL) toggle.
+Both clients open on **sign in / create account**. Once signed in they show **System status** (live connectivity to the gateway and each backend dependency) and **Account** (your details from the backend), with an English/Arabic (RTL) toggle. Desktop keeps the session in the OS keychain and Web in an HttpOnly cookie, so restarting or reloading keeps you signed in.
 
 > **Windows note:** use `127.0.0.1` rather than `localhost` for command-line clients. On some machines `localhost` resolves to IPv6 `::1` first, and the connection stalls because the stack binds IPv4 loopback only. Browsers fall back automatically.
 

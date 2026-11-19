@@ -17,11 +17,12 @@ from careerpilot_common.correlation import get_correlation_id
 class ServiceError(Exception):
     """Raise for expected, client-visible failures."""
 
-    def __init__(self, status_code: int, code: str, message: str) -> None:
+    def __init__(self, status_code: int, code: str, message: str, headers: dict[str, str] | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.code = code
         self.message = message
+        self.headers = headers
 
 
 def error_body(code: str, message: str) -> dict[str, object]:
@@ -31,13 +32,17 @@ def error_body(code: str, message: str) -> dict[str, object]:
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ServiceError)
     async def _service_error(_: Request, exc: ServiceError) -> JSONResponse:
-        return JSONResponse(error_body(exc.code, exc.message), status_code=exc.status_code)
+        return JSONResponse(error_body(exc.code, exc.message), status_code=exc.status_code, headers=exc.headers)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:
-        code = {404: "not_found", 405: "method_not_allowed", 401: "unauthorized", 403: "forbidden"}.get(
-            exc.status_code, "http_error"
-        )
+        code = {
+            404: "not_found",
+            405: "method_not_allowed",
+            401: "unauthorized",
+            403: "forbidden",
+            429: "rate_limited",
+        }.get(exc.status_code, "http_error")
         message = exc.detail if isinstance(exc.detail, str) else "Request failed"
         return JSONResponse(error_body(code, message), status_code=exc.status_code)
 

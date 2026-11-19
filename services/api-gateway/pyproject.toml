@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "careerpilot-api-gateway"
 version = "0.1.0"
-description = "Edge gateway/BFF: routing, CORS, correlation IDs, health aggregation. No business logic."
+description = "Edge gateway: routing, CORS, correlation IDs, token verification, rate limiting, health aggregation. No business logic."
 requires-python = ">=3.10"
 dependencies = [
-    "careerpilot-common[redis,telemetry]",
+    "careerpilot-common[redis,telemetry,auth]",
     "uvicorn[standard]==0.54.0",
 ]
 

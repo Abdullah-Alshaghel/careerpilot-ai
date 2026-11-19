@@ -1,6 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError, createApiClient, type FetchLike } from "./index";
 
+const user = {
+  id: "6f1c2b9e-3d4a-4b8e-9a7c-2e5d1f0a9b31",
+  email: "ada@example.com",
+  locale: "en",
+  status: "active",
+  created_at: "2026-11-19T10:15:00Z",
+};
+
+const tokens = {
+  access_token: "access-1",
+  token_type: "Bearer",
+  expires_in: 600,
+  refresh_token: "r".repeat(43),
+  refresh_expires_in: 2_592_000,
+  user,
+};
+
 const okBody = {
   service: "api-gateway",
   version: "0.1.0",
@@ -41,8 +58,10 @@ describe("createApiClient", () => {
     expect(init!.credentials).toBe("omit");
   });
 
-  it("attaches the bearer token when one is available", async () => {
-    const fetch = vi.fn<FetchLike>(async () => jsonResponse(okBody));
+  it("sends the bearer token on protected calls but never on health or auth calls", async () => {
+    const fetch = vi.fn<FetchLike>(async (url) =>
+      url.endsWith("/v1/users/me") ? jsonResponse(user) : jsonResponse(okBody),
+    );
     const client = createApiClient({
       baseUrl: "http://localhost:8080",
       fetch,
@@ -50,9 +69,11 @@ describe("createApiClient", () => {
       getAccessToken: () => "tok-123",
     });
     await client.health();
-    expect((fetch.mock.calls[0]![1]!.headers as Record<string, string>).authorization).toBe(
-      "Bearer tok-123",
-    );
+    await client.users.me();
+    const auth = (i: number) =>
+      (fetch.mock.calls[i]![1]!.headers as Record<string, string>).authorization;
+    expect(auth(0)).toBeUndefined();
+    expect(auth(1)).toBe("Bearer tok-123");
   });
 
   it("raises invalid_response when the payload breaks the contract", async () => {
@@ -105,5 +126,103 @@ describe("createApiClient", () => {
       timeoutMs: 20,
     });
     await expect(client.health()).rejects.toMatchObject({ kind: "timeout" });
+  });
+});
+
+describe("authentication", () => {
+  const unauthorized = (code = "token_expired") =>
+    jsonResponse({ error: { code, message: "Sign in again", correlation_id: null } }, 401);
+
+  it("posts credentials to the auth endpoints and validates token responses", async () => {
+    const fetch = vi.fn<FetchLike>(async () => jsonResponse(tokens));
+    const client = createApiClient({
+      baseUrl: "http://localhost:8080",
+      fetch,
+      clientType: "desktop",
+    });
+    await expect(client.auth.login({ email: "a@b.co", password: "pw" })).resolves.toEqual(tokens);
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(url).toBe("http://localhost:8080/v1/auth/login");
+    expect(init!.method).toBe("POST");
+    expect(JSON.parse(init!.body as string)).toEqual({ email: "a@b.co", password: "pw" });
+  });
+
+  it("treats a token response with a malformed refresh token as invalid", async () => {
+    const fetch = vi.fn<FetchLike>(async () => jsonResponse({ ...tokens, refresh_token: "x" }));
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(client.auth.refresh("r".repeat(43))).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
+  });
+
+  it("accepts 204 from logout", async () => {
+    const fetch = vi.fn<FetchLike>(async () => new Response(null, { status: 204 }));
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(client.auth.logout("r".repeat(43))).resolves.toBeUndefined();
+  });
+
+  it("refreshes once on 401 and retries with the new token", async () => {
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(jsonResponse(user));
+    const onUnauthorized = vi.fn(async () => "access-2");
+    const client = createApiClient({
+      baseUrl: "http://localhost:8080",
+      fetch,
+      clientType: "web",
+      getAccessToken: () => "access-1",
+      onUnauthorized,
+    });
+    await expect(client.users.me()).resolves.toEqual(user);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+    expect((fetch.mock.calls[1]![1]!.headers as Record<string, string>).authorization).toBe(
+      "Bearer access-2",
+    );
+  });
+
+  it("gives up when the refresh fails, without looping", async () => {
+    const fetch = vi.fn<FetchLike>(async () => unauthorized());
+    const onUnauthorized = vi.fn(async () => null);
+    const client = createApiClient({
+      baseUrl: "http://localhost:8080",
+      fetch,
+      clientType: "web",
+      getAccessToken: () => "access-1",
+      onUnauthorized,
+    });
+    await expect(client.users.me()).rejects.toMatchObject({ status: 401 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not try to refresh when a login itself is rejected", async () => {
+    const fetch = vi.fn<FetchLike>(async () => unauthorized("invalid_credentials"));
+    const onUnauthorized = vi.fn(async () => "x");
+    const client = createApiClient({
+      baseUrl: "http://localhost:8080",
+      fetch,
+      clientType: "web",
+      onUnauthorized,
+    });
+    await expect(client.auth.login({ email: "a@b.co", password: "x" })).rejects.toMatchObject({
+      code: "invalid_credentials",
+    });
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it("exposes Retry-After on rate-limited responses", async () => {
+    const fetch = vi.fn<FetchLike>(async () =>
+      jsonResponse(
+        { error: { code: "rate_limited", message: "Too many attempts", correlation_id: null } },
+        429,
+        { "retry-after": "120" },
+      ),
+    );
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(client.auth.login({ email: "a@b.co", password: "x" })).rejects.toMatchObject({
+      code: "rate_limited",
+      retryAfter: 120,
+    });
   });
 });

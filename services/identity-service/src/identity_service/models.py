@@ -81,6 +81,10 @@ class UserSession(Base):
     id: Mapped[uuid.UUID] = _uuid_pk()
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     refresh_token_hash: Mapped[bytes] = mapped_column(LargeBinary(32), unique=True)
+    # Hash of the token this one replaced. Presenting it again after the reuse
+    # grace window means a stolen token: the whole session is revoked.
+    previous_refresh_token_hash: Mapped[bytes | None] = mapped_column(LargeBinary(32), index=True)
+    rotated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     client_type: Mapped[ClientType] = mapped_column(
         Enum(ClientType, name="client_type", values_callable=lambda e: [m.value for m in e])
     )

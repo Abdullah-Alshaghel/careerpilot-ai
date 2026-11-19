@@ -62,12 +62,7 @@ jobs:
           node-version: 24
           cache: npm
       - name: Generate throwaway CI secrets
-        run: |
-          python - <<'EOF'
-          import re, secrets
-          src = open(".env.example").read()
-          open(".env", "w").write(re.sub(r"=change-me-[a-z0-9-]+", lambda m: "=" + secrets.token_hex(16), src))
-          EOF
+        run: python scripts/init-env.py
       - run: docker compose up -d --build --wait
       - run: pip install -r requirements-dev.txt
       - run: pytest tests/integration

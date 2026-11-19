@@ -30,8 +30,9 @@ Authoritative reference: `CareerPilot_AI_Technical_Architecture_v1.1_Desktop_Web
 | `packages/i18n` | en/ar dictionaries, RTL/LTR, formatting |
 | `packages/config` | Shared tsconfig |
 | `services/*` | FastAPI domain services (implemented: `api-gateway`, `identity-service`) |
+| `apps/web/src/server` | Web server-only code: session endpoints that hold the refresh-token cookie (ADR-014) |
 | `agents/*` | LangGraph agents (Phase 5+) |
-| `shared/python` | `careerpilot_common`: config, JSON logging + redaction, correlation IDs, health, errors, event envelope. **No domain models.** |
+| `shared/python` | `careerpilot_common`: config, JSON logging + redaction, correlation IDs, health, errors, event envelope, access-token verification. **No domain models.** |
 | `shared/api-contracts`, `shared/event-schemas` | Language-neutral JSON Schemas + canonical examples |
 | `infrastructure/*` | Postgres init, RabbitMQ config, SeaweedFS entrypoint, monitoring |
 | `tests/contract`, `tests/integration`, `tests/e2e` | Cross-cutting test suites |
@@ -60,7 +61,15 @@ Each records a reversible default chosen where the brief left a gap.
 
 **ADR-010 — Gateway buffers request bodies (12 MB cap) instead of streaming.** This bounds memory per request and rejects oversized uploads (413) before any service sees them. Revisit with presigned S3 uploads in Phase 3 for large documents.
 
-**ADR-011 — Bearer tokens, no cookies, no credentialed CORS.** `credentials: "omit"` in the client and `allow_credentials=False` at the gateway remove the CSRF class of attacks. Token storage: Desktop → OS keychain via a scoped Tauri plugin (Phase 2); Web → in-memory access token + HttpOnly refresh cookie on the web origin only (Phase 2 decision, documented in SECURITY.md).
+**ADR-011 — Bearer tokens, no cookies, no credentialed CORS.** `credentials: "omit"` in the client and `allow_credentials=False` at the gateway remove the CSRF class of attacks. Token storage: Desktop → refresh token in the OS keychain through three scoped app commands (`src-tauri/src/session.rs`). This is a custom command rather than a third-party plugin, so the webview can touch exactly one keychain entry. Web → in-memory access token, with the refresh token in an HttpOnly cookie on the web origin only (ADR-014). Neither client persists access tokens.
+
+**ADR-012 — Gateway rate limiting fails open.** Fixed windows in Redis (`INCR` + `EXPIRE NX`). If Redis is unreachable, requests are allowed and a warning is logged, so a cache outage does not become a sign-in outage. Argon2id cost and Identity's generic errors still slow guessing. Switch auth routes to fail-closed if threat modelling says otherwise.
+
+**ADR-013 — Asymmetric access tokens, verified everywhere.** Only Identity holds an Ed25519 private key. It issues 10-minute `at+jwt` access tokens and opaque, rotating refresh tokens. The gateway and every service verify tokens with the public JWKS (`GET /.well-known/jwks.json` on Identity, internal only) using shared code in `careerpilot_common.auth`. The gateway rejects bad tokens at the edge and strips client-supplied identity headers; services verify again rather than trusting the network. EdDSA was chosen over RS256 for its small keys and signatures and its lack of parameter pitfalls.
+
+**ADR-014 — Web sessions via the web app's own server.** `POST /api/session/{login,register,refresh,logout}` (Next.js route handlers) call the gateway, keep the refresh token in an `HttpOnly; Secure; SameSite=Strict; Path=/api/session` cookie and return only the access token. Page scripts, including any injected by XSS, cannot read the long-lived credential. When several tabs refresh at once, Identity allows a 15 s reuse grace and the web server answers `409 refresh_token_superseded` without touching the cookie, so the losing tab retries with the new one.
+
+**ADR-015 — Readiness probes reuse one RabbitMQ connection.** Opening an AMQP connection per probe made readiness flap under load (found by the Phase 2 live E2E run). `careerpilot_common.health.RabbitMQProbe` keeps one connection and reopens it only after it closes.
 
 ## Service template (what every service has)
 

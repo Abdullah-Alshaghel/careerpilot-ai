@@ -18,7 +18,7 @@ from careerpilot_common.correlation import get_correlation_id
 
 REDACTED = "[REDACTED]"
 _SENSITIVE_KEYS = re.compile(
-    r"pass(word)?|secret|token|authorization|cookie|api[_-]?key|credential|cv_text|document_text",
+    r"pass(word)?|secret|token|authorization|cookie|api[_-]?key|signing[_-]?key|private[_-]?key|credential|cv_text|document_text",
     re.IGNORECASE,
 )
 # user:password@ inside connection URLs

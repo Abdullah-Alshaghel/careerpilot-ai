@@ -42,6 +42,10 @@ Use `tauri-plugin-updater` with a signed update manifest:
 2. Separate endpoints per channel (`/desktop/dev/latest.json`, `/desktop/stable/latest.json`), HTTPS only.
 3. Updates are verified against the embedded public key before install. Grant only the `updater:default` permission and extend the `security.rs` allow-list in the same change.
 
+## Keychain entry
+
+Service = the bundle identifier (`ai.careerpilot.desktop.dev` or `ai.careerpilot.desktop`), account = `refresh-token`, so dev and production builds keep separate sessions. On Windows it appears in Credential Manager → Windows Credentials. Signing out deletes it.
+
 ## Security boundaries
 
-The webview has **no IPC permissions** (`capabilities/main.json`), `withGlobalTauri: false`, `freezePrototype: true`, and no inline/eval scripts in the release CSP. No secrets are compiled in: `VITE_*` values are public, and `npm run check:secrets` scans `dist/` for credential patterns and private `.env` values.
+The webview holds exactly three IPC permissions (`capabilities/main.json`): load, store and clear the session refresh token in the OS credential store (`src/session.rs`). They accept only refresh-token-shaped values and touch no other keychain entry. Every app command is declared in `build.rs`'s app manifest, so a new command is unusable until a capability grants it, and `security.rs` fails if the grants or the registered commands change without review. Also `withGlobalTauri: false`, `freezePrototype: true`, and no inline/eval scripts in the release CSP. No secrets are compiled in: `VITE_*` values are public, and `npm run check:secrets` scans `dist/` for credential patterns and private `.env` values.

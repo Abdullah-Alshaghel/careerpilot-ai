@@ -7,7 +7,52 @@ use std::path::Path;
 
 /// Every permission the frontend may hold. Extending this list is a reviewed,
 /// deliberate change.
-const ALLOWED_PERMISSIONS: &[&str] = &[];
+///
+/// Phase 2: the three refresh-token keychain commands (src/session.rs). They
+/// accept only refresh-token-shaped values and touch no other keychain entry.
+const ALLOWED_PERMISSIONS: &[&str] = &[
+    "allow-load-refresh-token",
+    "allow-store-refresh-token",
+    "allow-clear-refresh-token",
+];
+
+/// Commands the app registers. Each must be declared in build.rs's app
+/// manifest, so none is callable without an explicit permission.
+const APP_COMMANDS: &[&str] = &["load_refresh_token", "store_refresh_token", "clear_refresh_token"];
+
+#[test]
+fn every_registered_command_is_gated_by_the_app_manifest() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let build = fs::read_to_string(root.join("build.rs")).expect("build.rs");
+    let main = fs::read_to_string(root.join("src/main.rs")).expect("src/main.rs");
+    for command in APP_COMMANDS {
+        assert!(build.contains(&format!("\"{command}\"")), "{command} missing from build.rs manifest");
+        assert!(main.contains(&format!("session::{command}")), "{command} not registered in main.rs");
+    }
+    // A handler registered in main.rs but missing from the manifest would be
+    // callable without any permission.
+    assert_eq!(
+        main.matches("session::").count(),
+        APP_COMMANDS.len(),
+        "main.rs registers a command that is not on the reviewed list"
+    );
+}
+
+#[test]
+fn keychain_permissions_apply_only_to_the_bundled_main_window() {
+    for file in capability_files() {
+        let cap = read_json(&file);
+        let grants_keychain = cap["permissions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p.as_str().is_some_and(|id| id.contains("refresh-token")));
+        if grants_keychain {
+            assert_eq!(cap["windows"], serde_json::json!(["main"]), "{file}");
+            assert!(cap.get("remote").is_none(), "{file}");
+        }
+    }
+}
 
 fn read_json(rel: &str) -> Value {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(rel);

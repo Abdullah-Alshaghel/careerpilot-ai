@@ -10,7 +10,7 @@ RUN useradd --create-home --uid 10001 app
 
 COPY shared/python /src/shared/python
 COPY services/api-gateway /src/service
-RUN pip install /src/shared/python[redis,telemetry] /src/service
+RUN pip install /src/shared/python[redis,telemetry,auth] /src/service
 
 USER app
 WORKDIR /src/service

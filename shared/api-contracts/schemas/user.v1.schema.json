@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/user.v1.schema.json",
+  "title": "User",
+  "description": "Response of GET /v1/users/me; also embedded in token and session responses.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "email", "locale", "status", "created_at"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 320
+    },
+    "locale": {
+      "enum": ["en", "ar"]
+    },
+    "status": {
+      "enum": ["active", "disabled"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

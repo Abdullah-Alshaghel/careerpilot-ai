@@ -1,7 +1,7 @@
 "use client";
 
-import { StatusPage } from "@careerpilot/ui";
+import { CareerPilotApp } from "@careerpilot/ui";
 
 export default function HomePage() {
-  return <StatusPage />;
+  return <CareerPilotApp />;
 }

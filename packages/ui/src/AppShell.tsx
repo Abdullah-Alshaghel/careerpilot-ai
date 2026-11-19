@@ -1,14 +1,31 @@
+import type { MessageKey } from "@careerpilot/i18n";
 import type { ReactNode } from "react";
 import { Button } from "./components";
-import { useClientType, useI18n } from "./providers";
+import { useAuth, useClientType, useI18n } from "./providers";
+
+export interface NavItem<P extends string> {
+  id: P;
+  label: MessageKey;
+}
 
 /**
  * Workspace shell. Navigation grows phase by phase; only implemented
  * destinations are listed (no dead links).
  */
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell<P extends string>({
+  nav,
+  current,
+  onNavigate,
+  children,
+}: {
+  nav: readonly NavItem<P>[];
+  current: P;
+  onNavigate: (page: P) => void;
+  children: ReactNode;
+}) {
   const { t, locale, setLocale } = useI18n();
   const clientType = useClientType();
+  const { state, logout } = useAuth();
 
   return (
     <div className="cp-shell">
@@ -19,14 +36,30 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <nav aria-label="Primary">
           <ul className="cp-nav">
-            <li>
-              <a className="cp-nav-item" aria-current="page" href="#status">
-                {t("nav.systemStatus")}
-              </a>
-            </li>
+            {nav.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  className="cp-nav-item"
+                  aria-current={item.id === current ? "page" : undefined}
+                  data-testid={`nav-${item.id}`}
+                  onClick={() => onNavigate(item.id)}
+                >
+                  {t(item.label)}
+                </button>
+              </li>
+            ))}
           </ul>
         </nav>
         <div className="cp-sidebar-footer">
+          {state.status === "authenticated" ? (
+            <span className="cp-user" data-testid="signed-in-user">
+              {t("auth.signedInAs")} <span className="cp-mono">{state.user.email}</span>
+            </span>
+          ) : null}
+          <Button data-testid="sign-out" onClick={() => void logout()}>
+            {t("auth.signOut")}
+          </Button>
           <Button
             data-testid="locale-toggle"
             onClick={() => setLocale(locale === "en" ? "ar" : "en")}
@@ -39,9 +72,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
         </div>
       </aside>
-      <main className="cp-main" id="status">
-        {children}
-      </main>
+      <main className="cp-main">{children}</main>
     </div>
   );
 }

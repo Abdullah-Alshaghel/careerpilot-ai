@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/auth-token.v1.schema.json",
+  "title": "TokenResponse",
+  "description": "Response of POST /v1/auth/register, /login and /refresh. access_token is a short-lived EdDSA JWT; refresh_token is opaque and single-use (rotated on every refresh). The Web BFF never forwards refresh_token to the browser (see auth-session.v1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "access_token",
+    "token_type",
+    "expires_in",
+    "refresh_token",
+    "refresh_expires_in",
+    "user"
+  ],
+  "properties": {
+    "access_token": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "token_type": {
+      "const": "Bearer"
+    },
+    "expires_in": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "refresh_token": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "refresh_expires_in": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "user": {
+      "$ref": "user.v1.schema.json"
+    }
+  }
+}

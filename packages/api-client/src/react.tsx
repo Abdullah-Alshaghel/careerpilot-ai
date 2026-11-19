@@ -22,6 +22,9 @@ export function useApiClient(): ApiClient {
 
 export const queryKeys = {
   health: ["platform", "health"] as const,
+  // User-scoped data. The whole cache is cleared on sign-out, so one user's
+  // data can never be shown to the next person who signs in on this device.
+  me: ["users", "me"] as const,
 };
 
 export const HEALTH_REFRESH_MS = 15_000;
@@ -35,5 +38,14 @@ export function useHealth() {
     refetchInterval: HEALTH_REFRESH_MS,
     refetchIntervalInBackground: false,
     retry: 1,
+  });
+}
+
+/** The signed-in user's account (GET /v1/users/me). */
+export function useMe() {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.me,
+    queryFn: ({ signal }) => client.users.me(signal),
   });
 }

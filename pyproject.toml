@@ -16,10 +16,12 @@ ignore = ["RUF012"]
 "**/migrations/**" = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["careerpilot_common", "api_gateway", "identity_service"]
+known-first-party = ["careerpilot_common", "api_gateway", "identity_service", "tests"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -ra"
+# Lets integration tests share helpers (tests/integration/conftest.py).
+pythonpath = ["."]
 testpaths = ["shared/python/tests", "services", "tests/contract", "tests/integration"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

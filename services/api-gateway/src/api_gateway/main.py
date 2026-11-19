@@ -8,9 +8,12 @@ import redis.asyncio as redis
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from api_gateway.edge import EdgePolicy
 from api_gateway.proxy import build_proxy_router
+from api_gateway.ratelimit import RateLimiter
 from api_gateway.settings import GatewaySettings
 from careerpilot_common.app import create_service_app
+from careerpilot_common.auth import JwksCache
 from careerpilot_common.health import (
     HealthCheck,
     HealthResponse,
@@ -40,6 +43,19 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
             app.state.http = httpx.AsyncClient(timeout=settings.upstream_timeout_seconds, follow_redirects=False)
         if not hasattr(app.state, "redis"):
             app.state.redis = redis.from_url(settings.redis_url.get_secret_value())
+        if not hasattr(app.state, "jwks"):
+            http: httpx.AsyncClient = app.state.http
+
+            async def fetch_jwks() -> dict:
+                resp = await http.get(settings.jwks_url())
+                resp.raise_for_status()
+                return resp.json()
+
+            app.state.jwks = JwksCache(
+                fetch_jwks,
+                ttl=settings.jwks_cache_ttl_seconds,
+                min_refresh_interval=settings.jwks_min_refresh_interval_seconds,
+            )
         try:
             yield
         finally:
@@ -56,10 +72,16 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
         return build_health_response(settings.service_name, settings.service_version, results)
 
     app: FastAPI
+    policy = EdgePolicy(
+        limiter=lambda: RateLimiter(app.state.redis),
+        jwks=lambda: app.state.jwks,
+        limits=settings.rate_limits(),
+        trusted_proxies=settings.trusted_proxy_cidrs,
+    )
     app = create_service_app(
         settings,
         checks=lambda: _checks_for(app),
-        routers=[public, build_proxy_router(settings.route_table(), settings.max_request_body_bytes)],
+        routers=[public, build_proxy_router(settings.route_table(), settings.max_request_body_bytes, policy)],
         lifespan=lifespan,
     )
     app.state.settings = settings
@@ -71,7 +93,7 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         # Must cover every header @careerpilot/api-client sends (tested in tests/integration).
         allow_headers=["authorization", "content-type", "x-correlation-id", "x-client-type", "idempotency-key"],
-        expose_headers=["x-correlation-id"],
+        expose_headers=["x-correlation-id", "retry-after"],
         max_age=600,
     )
     return app

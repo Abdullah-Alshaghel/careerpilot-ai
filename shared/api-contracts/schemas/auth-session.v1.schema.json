@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/auth-session.v1.schema.json",
+  "title": "BrowserSession",
+  "description": "Response of the web app's own server (POST /api/session/*) to the browser. The refresh token stays in an HttpOnly cookie and is never part of this body.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["access_token", "token_type", "expires_in", "user"],
+  "properties": {
+    "access_token": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "token_type": {
+      "const": "Bearer"
+    },
+    "expires_in": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "user": {
+      "$ref": "user.v1.schema.json"
+    }
+  }
+}

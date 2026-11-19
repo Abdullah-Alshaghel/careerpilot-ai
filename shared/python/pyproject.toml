@@ -18,6 +18,7 @@ dependencies = [
 postgres = ["sqlalchemy[asyncio]==2.0.58", "psycopg[binary]==3.3.9"]
 redis = ["redis==8.1.0"]
 rabbitmq = ["aio-pika==9.6.2"]
+auth = ["pyjwt[crypto]==2.15.1"]
 telemetry = [
     "opentelemetry-sdk==1.45.2",
     "opentelemetry-exporter-otlp-proto-http==1.45.2",

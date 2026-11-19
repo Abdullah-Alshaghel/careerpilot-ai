@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
+from api_gateway.edge import GATEWAY_OWNED_HEADERS, EdgePolicy
 from careerpilot_common.correlation import CORRELATION_HEADER, get_correlation_id
 from careerpilot_common.errors import error_body
 
@@ -31,6 +32,7 @@ _HOP_BY_HOP = {
     "x-forwarded-for",
     "x-forwarded-proto",
     "x-forwarded-host",
+    *GATEWAY_OWNED_HEADERS,
 }
 _METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"]
 
@@ -43,12 +45,14 @@ def resolve_upstream(path: str, routes: dict[str, str]) -> str | None:
     return routes[best] if best else None
 
 
-def _forward_headers(request: Request) -> list[tuple[str, str]]:
+def _forward_headers(request: Request, client_ip: str, extra: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    # Identity headers from the client are dropped (in _HOP_BY_HOP); only the
+    # edge policy's verified values in ``extra`` are forwarded.
     headers = [(k, v) for k, v in request.headers.items() if k.lower() not in _HOP_BY_HOP]
     headers.append((CORRELATION_HEADER, get_correlation_id() or ""))
-    if request.client:
-        headers.append(("x-forwarded-for", request.client.host))
+    headers.append(("x-forwarded-for", client_ip))
     headers.append(("x-forwarded-proto", request.url.scheme))
+    headers.extend(extra)
     return headers
 
 
@@ -71,7 +75,23 @@ async def _read_limited_body(request: Request, limit: int) -> bytes | None:
     return b"".join(chunks)
 
 
-def build_proxy_router(routes: dict[str, str], max_body_bytes: int) -> APIRouter:
+class _BodyReader:
+    """Reads the request body at most once (the edge policy may need it first)."""
+
+    def __init__(self, request: Request, limit: int) -> None:
+        self._request = request
+        self._limit = limit
+        self._read = False
+        self._body: bytes | None = None
+
+    async def __call__(self) -> bytes | None:
+        if not self._read:
+            self._body = await _read_limited_body(self._request, self._limit)
+            self._read = True
+        return self._body
+
+
+def build_proxy_router(routes: dict[str, str], max_body_bytes: int, policy: EdgePolicy) -> APIRouter:
     router = APIRouter()
 
     @router.api_route("/v1/{path:path}", methods=_METHODS, include_in_schema=False)
@@ -81,7 +101,13 @@ def build_proxy_router(routes: dict[str, str], max_body_bytes: int) -> APIRouter
         if upstream is None:
             return JSONResponse(error_body("not_found", "Route not found"), status_code=404)
 
-        body = await _read_limited_body(request, max_body_bytes)
+        read_body = _BodyReader(request, max_body_bytes)
+        # Authentication runs before the body is buffered, so unauthenticated
+        # callers can't make the gateway hold large uploads in memory.
+        admission = await policy.admit(request, full_path, read_body)
+        if admission.reject is not None:
+            return admission.reject
+        body = await read_body()
         if body is None:
             return JSONResponse(error_body("payload_too_large", "Request body too large"), status_code=413)
 
@@ -90,7 +116,7 @@ def build_proxy_router(routes: dict[str, str], max_body_bytes: int) -> APIRouter
             request.method,
             upstream.rstrip("/") + full_path,
             params=request.query_params.multi_items(),
-            headers=_forward_headers(request),
+            headers=_forward_headers(request, policy.client_ip(request), admission.headers),
             content=body,
         )
         try:
@@ -102,6 +128,8 @@ def build_proxy_router(routes: dict[str, str], max_body_bytes: int) -> APIRouter
             log.warning("upstream unavailable", extra={"upstream_path": full_path, "error_type": type(exc).__name__})
             return JSONResponse(error_body("upstream_unavailable", "Upstream service unavailable"), status_code=502)
 
+        if admission.on_response is not None:
+            await admission.on_response(upstream_response.status_code)
         response_headers = {k: v for k, v in upstream_response.headers.items() if k.lower() not in _HOP_BY_HOP}
         return StreamingResponse(
             upstream_response.aiter_raw(),

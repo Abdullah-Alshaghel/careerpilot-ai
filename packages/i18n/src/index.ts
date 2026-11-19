@@ -11,6 +11,10 @@ export const DEFAULT_LOCALE: Locale = "en";
 const dictionaries: Record<Locale, Messages> = { en, ar };
 const RTL_LOCALES: ReadonlySet<Locale> = new Set(["ar"]);
 
+export function isMessageKey(value: unknown): value is MessageKey {
+  return typeof value === "string" && Object.hasOwn(en, value);
+}
+
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (SUPPORTED_LOCALES as readonly string[]).includes(value);
 }
@@ -41,6 +45,13 @@ export function formatTime(date: Date, locale: Locale): string {
     minute: "2-digit",
     second: "2-digit",
   }).format(date);
+}
+
+export function formatDate(iso: string, locale: Locale): string {
+  const tag = locale === "ar" ? "ar-u-nu-latn" : "en-GB";
+  return new Intl.DateTimeFormat(tag, { year: "numeric", month: "long", day: "numeric" }).format(
+    new Date(iso),
+  );
 }
 
 /** Apply lang/dir to the document root (call from the host app on locale change). */

@@ -1,5 +1,5 @@
 # Local development / CI test environment for all Python packages.
--e shared/python[postgres,redis,rabbitmq,telemetry]
+-e shared/python[postgres,redis,rabbitmq,telemetry,auth]
 -e services/api-gateway
 -e services/identity-service
 pytest==9.2.0

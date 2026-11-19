@@ -133,14 +133,49 @@ def redis_check(client: object) -> HealthCheck:
     return check
 
 
-def rabbitmq_check(url: str, timeout: float) -> HealthCheck:
-    async def check() -> None:
-        import aio_pika
+class RabbitMQProbe:
+    """RabbitMQ readiness over one long-lived connection.
 
-        connection = await aio_pika.connect(url, timeout=timeout)
-        await connection.close()
+    Opening a connection per probe makes RabbitMQ churn connections; under
+    load a handshake can exceed the check timeout and readiness flaps. The
+    connection is reopened only after it has closed (broker restart, network
+    loss, missed heartbeats).
+    """
 
-    return check
+    def __init__(self, url: str, timeout: float, connect: Callable[..., Awaitable[object]] | None = None) -> None:
+        self._url = url
+        self._timeout = timeout
+        self._connect = connect
+        self._connection: object | None = None
+        self._lock = asyncio.Lock()
+
+    def _is_open(self) -> bool:
+        return self._connection is not None and not self._connection.is_closed  # type: ignore[attr-defined]
+
+    async def check(self) -> None:
+        if self._is_open():
+            return
+        async with self._lock:
+            if self._is_open():
+                return
+            await self._discard()
+            connect = self._connect
+            if connect is None:
+                import aio_pika
+
+                connect = aio_pika.connect
+            self._connection = await connect(self._url, timeout=self._timeout)
+
+    async def _discard(self) -> None:
+        connection, self._connection = self._connection, None
+        if connection is not None:
+            try:
+                await connection.close()  # type: ignore[attr-defined]
+            except Exception:  # noqa: S110 - already broken; nothing to clean up
+                pass
+
+    async def close(self) -> None:
+        await self._discard()
 
 
 def http_ready_check(client: object, url: str) -> HealthCheck:

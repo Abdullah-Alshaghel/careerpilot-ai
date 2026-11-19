@@ -1,7 +1,11 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-window",
-  "description": "Least privilege: the main window gets no IPC permissions in Phase 1. Add individual, scoped permissions only when a feature requires them, and extend tests/security.rs's allow-list in the same change.",
+  "description": "Least privilege: the main window may only load, store and clear the session refresh token in the OS keychain. Add permissions only when a feature requires them, and extend tests/security.rs's allow-list in the same change.",
   "windows": ["main"],
-  "permissions": []
+  "permissions": [
+    "allow-load-refresh-token",
+    "allow-store-refresh-token",
+    "allow-clear-refresh-token"
+  ]
 }
