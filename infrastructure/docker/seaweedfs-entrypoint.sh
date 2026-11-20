@@ -18,4 +18,9 @@ cat > /tmp/s3.json <<EOF
 }
 EOF
 
-exec weed server -dir=/data -ip.bind=0.0.0.0 -s3 -s3.port=8333 -s3.config=/tmp/s3.json -volume.max=0
+# Volume slots: with -volume.max=0 SeaweedFS derives the count from free disk
+# divided by the volume size (30 GB by default), which gave only 2 slots on a
+# CI runner. Each bucket needs its own, so the second bucket got "No writable
+# volume". Small volumes and a fixed count avoid that; volumes grow on demand,
+# so nothing is preallocated.
+exec weed server -dir=/data -ip.bind=0.0.0.0 -s3 -s3.port=8333 -s3.config=/tmp/s3.json \n  -master.volumeSizeLimitMB=1024 -volume.max=64
