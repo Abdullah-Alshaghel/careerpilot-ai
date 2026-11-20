@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "careerpilot-company-service"
+version = "0.1.0"
+description = "Company workspace: target companies, careers URLs and ATS connector configuration. Owns the `companies` database."
+requires-python = ">=3.10"
+dependencies = [
+    "careerpilot-common[postgres,telemetry,auth]",
+    "alembic==1.20.1",
+    "uvicorn[standard]==0.54.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

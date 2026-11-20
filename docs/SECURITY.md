@@ -75,6 +75,22 @@
 - **CV text crosses RabbitMQ** in `document.text_extracted` (ADR-018). Production needs TLS on the broker connection and broker-level encryption at rest, or a switch to signed URLs.
 - Rule-based extraction is less accurate on unusual layouts; users correct suggestions during review (ADR-016).
 
+## Implemented (Phase 4: company workspace)
+
+| Control | Where | Verified by |
+|---|---|---|
+| Careers URLs: https only, public DNS name, default port, no credentials, no IP literals (incl. decimal IPv4), no `localhost`/internal suffixes; IDN hosts normalized | `company_service/urls.py` | `test_urls.py` (cloud-metadata IP, `user@host` confusion, lookalike hosts), live `test_unsafe_url_is_refused_with_its_reason`, Playwright metadata-IP step |
+| Connectors hold public identifiers only; configs with extra keys (e.g. `api_key`) or path-like slugs are refused | `schemas.validate_connector_config` | `test_bad_connector_configs_are_refused` |
+| Every route needs a verified token; every query is scoped by `user_id`; other users' companies and connectors are 404 | company service | `test_users_cannot_see_or_change_each_others_companies`, `test_companies_are_private_and_require_a_token` |
+| Stale edits from another device are refused (`409 version_conflict`) rather than overwriting | `service.update_company` | integration + UI tests |
+| Own database role, refused by every other database | provisioning | `test_service_role_cannot_access_other_databases` (now 4 services) |
+| External links: only `https://` leaves the app; Desktop opener capability scoped to `https://*` | `useOpenExternal`, `capabilities/main.json` | `openExternal.test.tsx`, `security.rs::opener_can_only_open_https_urls` |
+
+### Known limitations (Phase 4)
+
+- URL validation happens at entry; DNS-rebinding and redirect protection belong to the Phase 5 fetcher (ADR-021).
+- Company events (`company.*`) are not published yet; Phase 5 will read companies through this service's API or add events when a consumer exists.
+
 ## Rules for upcoming phases
 
 - **Approval gates (Phase 8)** are enforced in the Approval/Application services, never in clients. Submission requires a valid, non-revoked final approval for the *current* `package_version`; any package change invalidates it.

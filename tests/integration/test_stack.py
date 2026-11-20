@@ -30,6 +30,7 @@ def test_gateway_reports_all_dependencies_up():
         "identity-service",
         "document-service",
         "career-profile-service",
+        "company-service",
     }
 
 

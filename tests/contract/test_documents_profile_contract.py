@@ -20,6 +20,7 @@ from career_profile_service.schemas import ProfileOut
 from career_profile_service.worker import DocumentDeletedV1 as ConsumerDeleted
 from career_profile_service.worker import DocumentTextExtractedV1 as ConsumerExtracted
 from careerpilot_common.events import EventEnvelope
+from company_service.schemas import CompanyList, CompanyOut
 from document_service.schemas import DocumentDeletedV1, DocumentList, DocumentOut, DocumentTextExtractedV1
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,8 @@ def test_generated_schemas_are_up_to_date():
         ("document.json", "document.v1.schema.json", DocumentOut),
         ("document-list.json", "document-list.v1.schema.json", DocumentList),
         ("career-profile.json", "career-profile.v1.schema.json", ProfileOut),
+        ("company.json", "company.v1.schema.json", CompanyOut),
+        ("company-list.json", "company-list.v1.schema.json", CompanyList),
     ],
 )
 def test_api_examples_match_schema_and_model(example, schema, model):

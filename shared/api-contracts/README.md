@@ -9,7 +9,7 @@ Language-neutral source of truth for public API shapes.
   (`tests/contract/` and `packages/validation/src/*.test.ts`).
 
 Generated from service models (`python scripts/export-contracts.py`; do not edit by hand):
-`document.v1`, `document-list.v1`, `career-profile.v1`, and the event payloads in
+`document.v1`, `document-list.v1`, `career-profile.v1`, `company.v1`, `company-list.v1`, and the event payloads in
 `shared/event-schemas/payloads/`.
 
 Hand-written: `health.v1`, `user.v1` (`GET /v1/users/me`), `auth-token.v1`

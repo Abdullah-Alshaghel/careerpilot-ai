@@ -42,6 +42,7 @@ export async function mockApi(page: Page, { signedIn }: { signedIn: boolean }) {
   await page.route("**/api/session/logout", (route) => route.fulfill({ status: 204 }));
   await page.route("**/v1/documents", (route) => route.fulfill({ json: { documents: [] } }));
   await page.route("**/v1/profile", (route) => route.fulfill({ json: emptyProfile }));
+  await page.route("**/v1/companies", (route) => route.fulfill({ json: { companies: [] } }));
 }
 
 export const emptyProfile = {

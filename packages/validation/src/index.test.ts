@@ -5,6 +5,10 @@ import {
   apiBaseUrlSchema,
   browserSessionSchema,
   careerProfileSchema,
+  companyFormSchema,
+  companyListSchema,
+  companySchema,
+  connectorSlugSchema,
   documentListSchema,
   documentSchema,
   factValueSchemas,
@@ -195,5 +199,35 @@ describe("factValueSchemas (editor)", () => {
   ] as const)("%s rejects %o", (type, value, message) => {
     const result = factValueSchemas[type].safeParse(value);
     expect(result.error?.issues[0]?.message).toBe(message);
+  });
+});
+
+describe("company contracts", () => {
+  it.each([
+    ["company.json", companySchema],
+    ["company-list.json", companyListSchema],
+  ] as const)("accepts shared contract example %s", (file, schema) => {
+    expect(schema.safeParse(example(file)).error?.issues ?? []).toEqual([]);
+  });
+
+  it.each([
+    ["", true],
+    ["https://acme.com/jobs", true],
+    ["acme.com/careers", true],
+    ["acme.com:443/jobs", true],
+    ["http://acme.com", false],
+    ["javascript:alert(1)", false],
+  ])("company form careers_url %s -> %s", (url, ok) => {
+    const form = { name: "Acme", careers_url: url, region: "", priority: "medium", notes: "" };
+    expect(companyFormSchema.safeParse(form).success).toBe(ok);
+  });
+
+  it.each([
+    ["acme", true],
+    ["acme-inc_2.0", true],
+    ["../admin", false],
+    ["", false],
+  ])("connector slug %s -> %s", (slug, ok) => {
+    expect(connectorSlugSchema.safeParse(slug).success).toBe(ok);
   });
 });

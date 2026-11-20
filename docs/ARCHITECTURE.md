@@ -29,7 +29,7 @@ Authoritative reference: `CareerPilot_AI_Technical_Architecture_v1.1_Desktop_Web
 | `packages/ui` | Design tokens, components, app shell, shared screens |
 | `packages/i18n` | en/ar dictionaries, RTL/LTR, formatting |
 | `packages/config` | Shared tsconfig |
-| `services/*` | FastAPI domain services (implemented: `api-gateway`, `identity-service`, `document-service`, `career-profile-service`); each service with background work also runs a worker process from the same image |
+| `services/*` | FastAPI domain services (implemented: `api-gateway`, `identity-service`, `document-service`, `career-profile-service`, `company-service`); each service with background work also runs a worker process from the same image |
 | `apps/web/src/server` | Web server-only code: session endpoints that hold the refresh-token cookie (ADR-014) |
 | `agents/*` | LangGraph agents (Phase 5+) |
 | `shared/python` | `careerpilot_common`: config, JSON logging + redaction, correlation IDs, health, errors, event envelope, access-token verification (`require_user`), messaging (outbox, relay, consumers). **No domain models.** |
@@ -85,3 +85,9 @@ Each records a reversible default chosen where the brief left a gap.
 ## Service template (what every service has)
 
 `create_service_app()` gives: JSON logs with secret redaction, `X-Correlation-ID` propagation (validated format), uniform error bodies with no internals leaked, `/health/live` and `/health/ready` (503 when a dependency is down), docs disabled in production, and optional OpenTelemetry tracing (`OTEL_EXPORTER_OTLP_ENDPOINT`). Each service adds its settings (env vars, secrets typed `SecretStr`), Dockerfile (non-root, healthcheck), Alembic migrations, and tests.
+
+**ADR-021 — Fetchable URLs are validated at entry, and again at fetch time.** Careers URLs are user input that a server will request in Phase 5, so they are checked like a server request: https, public DNS name, default port, no credentials, no IP literal or internal host suffix. This stops the obvious SSRF targets (cloud metadata, localhost, intranet) when the URL is saved and gives the user a specific reason. Because DNS can change after validation, the Phase 5 fetcher must also resolve the host and refuse private, loopback and link-local addresses on every request (and on redirects).
+
+**ADR-022 — Optimistic concurrency for user-edited records.** The same person can edit a company from Desktop and Web at once. Each company has a `version`; clients send the version they edited, and a stale one gets `409 version_conflict` instead of silently overwriting. Clients refetch and ask the user to reapply. (Connector toggles are small, idempotent and unversioned.)
+
+**ADR-023 — External links open outside the app.** Web opens https links in a new tab with `noopener,noreferrer`; Desktop uses the official opener plugin with a capability scoped to `https://*`, so the webview can't launch local files, custom URI schemes or plain http, and never renders third-party pages itself. Both go through one shared `useOpenExternal` hook that also refuses non-https links.

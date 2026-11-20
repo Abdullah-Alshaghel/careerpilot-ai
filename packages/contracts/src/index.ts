@@ -224,3 +224,62 @@ export interface CareerProfile {
   facts: CareerFact[];
   conflicts: FactConflict[];
 }
+
+// --------------------------------------------------------------- companies
+
+export type CompanyPriority = "high" | "medium" | "low";
+
+/** Where Phase 5 will look for jobs. Public identifiers only, never credentials. */
+export type ConnectorType = "careers_page" | "greenhouse" | "lever" | "ashby";
+
+export interface ConnectorConfigByType {
+  careers_page: { url: string };
+  greenhouse: { board_token: string };
+  lever: { company: string };
+  ashby: { organization: string };
+}
+
+export interface Connector {
+  id: string;
+  connector_type: ConnectorType;
+  config: Record<string, string>;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DetectedConnector {
+  connector_type: ConnectorType;
+  config: Record<string, string>;
+}
+
+/** company.v1 */
+export interface Company {
+  id: string;
+  name: string;
+  /** https only, public host; normalized by the server */
+  careers_url: string | null;
+  region: string | null;
+  priority: CompanyPriority;
+  notes: string | null;
+  /** Send back on update; a stale version gets 409 version_conflict. */
+  version: number;
+  connectors: Connector[];
+  /** A public ATS board recognised from careers_url, not yet added as a connector. */
+  detected_connector: DetectedConnector | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** company-list.v1 (sorted by priority, then name) */
+export interface CompanyList {
+  companies: Company[];
+}
+
+export interface CompanyInput {
+  name: string;
+  careers_url: string | null;
+  region: string | null;
+  priority: CompanyPriority;
+  notes: string | null;
+}

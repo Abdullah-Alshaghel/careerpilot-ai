@@ -332,3 +332,56 @@ describe("profileMayChange", () => {
     );
   });
 });
+
+describe("companies", () => {
+  const company = {
+    id: "c1000000-0000-4000-8000-000000000001",
+    name: "Acme",
+    careers_url: "https://jobs.lever.co/acme",
+    region: null,
+    priority: "high",
+    notes: null,
+    version: 2,
+    connectors: [],
+    detected_connector: { connector_type: "lever", config: { company: "acme" } },
+    created_at: "2026-11-20T10:00:00Z",
+    updated_at: "2026-11-20T10:00:00Z",
+  };
+
+  it("sends updates with the version and validates the response", async () => {
+    const fetch = vi.fn<FetchLike>(async () => jsonResponse(company));
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(
+      client.companies.update(company.id, { priority: "high", version: 1 }),
+    ).resolves.toEqual(company);
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(url).toBe(`http://localhost:8080/v1/companies/${company.id}`);
+    expect(init!.method).toBe("PATCH");
+    expect(JSON.parse(init!.body as string)).toEqual({ priority: "high", version: 1 });
+  });
+
+  it("surfaces version conflicts", async () => {
+    const fetch = vi.fn<FetchLike>(async () =>
+      jsonResponse(
+        { error: { code: "version_conflict", message: "Changed elsewhere", correlation_id: null } },
+        409,
+      ),
+    );
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(
+      client.companies.update(company.id, { notes: "x", version: 1 }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "version_conflict",
+    });
+  });
+
+  it("rejects a company response with an unknown connector type", async () => {
+    const bad = { ...company, connectors: [{ connector_type: "linkedin_scraper" }] };
+    const fetch = vi.fn<FetchLike>(async () => jsonResponse(bad));
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(client.companies.get(company.id)).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
+  });
+});

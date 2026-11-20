@@ -42,3 +42,4 @@ EOSQL
 create_service_db identity identity_svc "$IDENTITY_DB_PASSWORD"
 create_service_db documents documents_svc "$DOCUMENTS_DB_PASSWORD"
 create_service_db career_profile career_profile_svc "$CAREER_PROFILE_DB_PASSWORD"
+create_service_db companies companies_svc "$COMPANIES_DB_PASSWORD"

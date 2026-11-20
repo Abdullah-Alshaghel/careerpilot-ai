@@ -20,6 +20,7 @@ class GatewaySettings(ServiceSettings):
     identity_service_url: str = "http://127.0.0.1:8101"
     document_service_url: str = "http://127.0.0.1:8102"
     career_profile_service_url: str = "http://127.0.0.1:8103"
+    company_service_url: str = "http://127.0.0.1:8104"
     upstream_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
     # File uploads (up to 10 MB, possibly from slow connections) get longer.
     upload_timeout_seconds: float = Field(default=60.0, gt=0, le=300)
@@ -76,6 +77,7 @@ class GatewaySettings(ServiceSettings):
             "/v1/users": self.identity_service_url,
             "/v1/documents": self.document_service_url,
             "/v1/profile": self.career_profile_service_url,
+            "/v1/companies": self.company_service_url,
         }
 
     def route_timeouts(self) -> dict[tuple[str, str], float]:
@@ -107,4 +109,5 @@ class GatewaySettings(ServiceSettings):
             "identity-service": self.identity_service_url,
             "document-service": self.document_service_url,
             "career-profile-service": self.career_profile_service_url,
+            "company-service": self.company_service_url,
         }

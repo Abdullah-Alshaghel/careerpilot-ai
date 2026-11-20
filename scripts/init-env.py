@@ -50,7 +50,7 @@ def main() -> int:
     target: Path = args.env_file
 
     if not target.exists():
-        target.write_text("\n".join(_render(example)) + "\n", encoding="utf-8")
+        target.write_bytes(("\n".join(_render(example)) + "\n").encode("utf-8"))  # LF on every OS
         print(f"created {target.name} with generated secrets")
         return 0
     if not args.update:
@@ -63,10 +63,11 @@ def main() -> int:
     if not missing:
         print(f"{target.name} is complete")
         return 0
-    with target.open("a", encoding="utf-8") as fh:
-        if not current.endswith("\n"):
-            fh.write("\n")
-        fh.write("\n".join(missing) + "\n")
+    # Binary append: exact LF line endings on every OS (Docker reads this file).
+    with target.open("ab") as fh:
+        if current and not current.endswith("\n"):
+            fh.write(b"\n")
+        fh.write(("\n".join(missing) + "\n").encode("utf-8"))
     names = ", ".join(_ASSIGNMENT.match(line).group(1) for line in missing)  # type: ignore[union-attr]
     print(f"added to {target.name}: {names}")
     return 0

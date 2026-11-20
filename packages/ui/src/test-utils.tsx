@@ -87,6 +87,7 @@ export function renderApp(
   fetch: FetchLike,
   store = new MemoryStore(),
   clientType: "desktop" | "web" = "desktop",
+  openExternal?: (url: string) => void,
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const view = render(
@@ -94,6 +95,7 @@ export function renderApp(
       apiBaseUrl="http://localhost:8080"
       clientType={clientType}
       fetch={fetch}
+      openExternal={openExternal}
       queryClient={queryClient}
       sessionTransport={(api) => createDirectSessionTransport(api, store)}
     >

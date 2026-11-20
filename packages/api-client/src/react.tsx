@@ -1,4 +1,11 @@
-import type { CareerDocument, CareerProfile, DocumentList, FactType } from "@careerpilot/contracts";
+import type {
+  CareerDocument,
+  CareerProfile,
+  CompanyInput,
+  ConnectorType,
+  DocumentList,
+  FactType,
+} from "@careerpilot/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, type ReactNode } from "react";
 import type { ApiClient } from "./index";
@@ -28,6 +35,7 @@ export const queryKeys = {
   me: ["users", "me"] as const,
   documents: ["users", "documents"] as const,
   profile: ["users", "profile"] as const,
+  companies: ["users", "companies"] as const,
 };
 
 const IN_FLIGHT: ReadonlySet<CareerDocument["status"]> = new Set(["uploaded", "processing"]);
@@ -158,6 +166,70 @@ export function useFactMutations() {
     }),
     remove: useMutation({
       mutationFn: (id: string) => client.profile.removeFact(id),
+      onSuccess: invalidate,
+    }),
+  };
+}
+
+/** The signed-in user's target companies (priority, then name). */
+export function useCompanies() {
+  const client = useApiClient();
+  return useQuery({
+    queryKey: queryKeys.companies,
+    queryFn: ({ signal }) => client.companies.list(signal),
+  });
+}
+
+export function useCompanyMutations() {
+  const client = useApiClient();
+  const queries = useQueryClient();
+  const invalidate = () => queries.invalidateQueries({ queryKey: queryKeys.companies });
+  return {
+    create: useMutation({
+      mutationFn: (input: CompanyInput) => client.companies.create(input),
+      onSuccess: invalidate,
+    }),
+    update: useMutation({
+      mutationFn: ({
+        id,
+        change,
+      }: {
+        id: string;
+        change: Partial<CompanyInput> & { version?: number };
+      }) => client.companies.update(id, change),
+      onSettled: invalidate,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => client.companies.remove(id),
+      onSuccess: invalidate,
+    }),
+    addConnector: useMutation({
+      mutationFn: ({
+        companyId,
+        connectorType,
+        config,
+      }: {
+        companyId: string;
+        connectorType: ConnectorType;
+        config: Record<string, string>;
+      }) => client.companies.addConnector(companyId, { connector_type: connectorType, config }),
+      onSuccess: invalidate,
+    }),
+    toggleConnector: useMutation({
+      mutationFn: ({
+        companyId,
+        connectorId,
+        enabled,
+      }: {
+        companyId: string;
+        connectorId: string;
+        enabled: boolean;
+      }) => client.companies.updateConnector(companyId, connectorId, { enabled }),
+      onSuccess: invalidate,
+    }),
+    removeConnector: useMutation({
+      mutationFn: ({ companyId, connectorId }: { companyId: string; connectorId: string }) =>
+        client.companies.removeConnector(companyId, connectorId),
       onSuccess: invalidate,
     }),
   };

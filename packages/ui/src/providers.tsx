@@ -19,6 +19,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -40,6 +41,29 @@ interface I18nValue {
 const I18nContext = createContext<I18nValue | null>(null);
 const ClientTypeContext = createContext<ClientType>("web");
 const SessionContext = createContext<SessionManager | null>(null);
+
+export type OpenExternal = (url: string) => void;
+
+/** Default: a new browser tab with no access back to this page. */
+const browserOpen: OpenExternal = (url) => {
+  window.open(url, "_blank", "noopener,noreferrer");
+};
+
+const OpenExternalContext = createContext<OpenExternal>(browserOpen);
+
+/**
+ * Open an https:// link outside the app (Web: new tab; Desktop: the system
+ * browser via the scoped opener plugin). Anything else is ignored.
+ */
+export function useOpenExternal(): OpenExternal {
+  const open = useContext(OpenExternalContext);
+  return useCallback(
+    (url: string) => {
+      if (/^https:\/\//i.test(url)) open(url);
+    },
+    [open],
+  );
+}
 
 export function useI18n(): I18nValue {
   const value = useContext(I18nContext);
@@ -85,6 +109,8 @@ export interface AppProvidersProps {
    */
   sessionTransport: (api: ApiClient) => SessionTransport;
   children: ReactNode;
+  /** How to open external https:// links on this platform (defaults to a browser tab). */
+  openExternal?: OpenExternal;
   /** Tests inject a fake network and query cache. */
   fetch?: FetchLike;
   queryClient?: QueryClient;
@@ -96,6 +122,7 @@ export function AppProviders({
   clientType,
   sessionTransport,
   children,
+  openExternal,
   fetch,
   queryClient,
 }: AppProvidersProps) {
@@ -150,7 +177,9 @@ export function AppProviders({
       <QueryClientProvider client={queries}>
         <ApiClientProvider client={api}>
           <SessionContext.Provider value={session}>
-            <I18nContext.Provider value={i18n}>{children}</I18nContext.Provider>
+            <OpenExternalContext.Provider value={openExternal ?? browserOpen}>
+              <I18nContext.Provider value={i18n}>{children}</I18nContext.Provider>
+            </OpenExternalContext.Provider>
           </SessionContext.Provider>
         </ApiClientProvider>
       </QueryClientProvider>

@@ -2,6 +2,10 @@ import type {
   CareerDocument,
   CareerFact,
   CareerProfile,
+  Company,
+  CompanyInput,
+  CompanyList,
+  ConnectorType,
   DocumentList,
   FactType,
   HealthResponse,
@@ -16,6 +20,8 @@ import {
   bulkUpdateResultSchema,
   careerFactSchema,
   careerProfileSchema,
+  companyListSchema,
+  companySchema,
   documentListSchema,
   documentSchema,
   healthResponseSchema,
@@ -93,6 +99,28 @@ export interface ApiClient {
     ): Promise<CareerFact>;
     setStatus(ids: string[], status: "user_verified" | "rejected"): Promise<number>;
     removeFact(id: string): Promise<void>;
+  };
+  companies: {
+    list(signal?: AbortSignal): Promise<CompanyList>;
+    get(id: string, signal?: AbortSignal): Promise<Company>;
+    create(input: CompanyInput): Promise<Company>;
+    /** Pass the version you edited; a stale one is rejected with 409 version_conflict. */
+    update(id: string, change: Partial<CompanyInput> & { version?: number }): Promise<Company>;
+    remove(id: string): Promise<void>;
+    addConnector(
+      companyId: string,
+      connector: {
+        connector_type: ConnectorType;
+        config: Record<string, string>;
+        enabled?: boolean;
+      },
+    ): Promise<Company>;
+    updateConnector(
+      companyId: string,
+      connectorId: string,
+      change: { config?: Record<string, string>; enabled?: boolean },
+    ): Promise<Company>;
+    removeConnector(companyId: string, connectorId: string): Promise<Company>;
   };
 }
 
@@ -316,6 +344,39 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       async removeFact(id) {
         await request("DELETE", `/v1/profile/facts/${encodeURIComponent(id)}`, null);
       },
+    },
+    companies: {
+      list: (signal) => request("GET", "/v1/companies", companyListSchema, { signal }),
+      get: (id, signal) =>
+        request("GET", `/v1/companies/${encodeURIComponent(id)}`, companySchema, { signal }),
+      create: (input) => request("POST", "/v1/companies", companySchema, { body: input }),
+      update: (id, change) =>
+        request("PATCH", `/v1/companies/${encodeURIComponent(id)}`, companySchema, {
+          body: change,
+        }),
+      async remove(id) {
+        await request("DELETE", `/v1/companies/${encodeURIComponent(id)}`, null);
+      },
+      addConnector: (companyId, connector) =>
+        request(
+          "POST",
+          `/v1/companies/${encodeURIComponent(companyId)}/connectors`,
+          companySchema,
+          { body: connector },
+        ),
+      updateConnector: (companyId, connectorId, change) =>
+        request(
+          "PATCH",
+          `/v1/companies/${encodeURIComponent(companyId)}/connectors/${encodeURIComponent(connectorId)}`,
+          companySchema,
+          { body: change },
+        ),
+      removeConnector: (companyId, connectorId) =>
+        request(
+          "DELETE",
+          `/v1/companies/${encodeURIComponent(companyId)}/connectors/${encodeURIComponent(connectorId)}`,
+          companySchema,
+        ),
     },
   };
 }

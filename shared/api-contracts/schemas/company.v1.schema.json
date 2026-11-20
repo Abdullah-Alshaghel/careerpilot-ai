@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/company.v1.schema.json",
+  "x-generated-from": "company_service.schemas.CompanyOut (scripts/export-contracts.py)",
+  "$defs": {
+    "ConnectorOut": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "connector_type": {
+          "$ref": "#/$defs/ConnectorType"
+        },
+        "config": {
+          "additionalProperties": true,
+          "title": "Config",
+          "type": "object"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "connector_type",
+        "config",
+        "enabled",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "ConnectorOut",
+      "type": "object"
+    },
+    "ConnectorType": {
+      "enum": [
+        "careers_page",
+        "greenhouse",
+        "lever",
+        "ashby"
+      ],
+      "title": "ConnectorType",
+      "type": "string"
+    },
+    "DetectedConnectorOut": {
+      "additionalProperties": false,
+      "properties": {
+        "connector_type": {
+          "$ref": "#/$defs/ConnectorType"
+        },
+        "config": {
+          "additionalProperties": true,
+          "title": "Config",
+          "type": "object"
+        }
+      },
+      "required": [
+        "connector_type",
+        "config"
+      ],
+      "title": "DetectedConnectorOut",
+      "type": "object"
+    },
+    "Priority": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Priority",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "careers_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Careers Url"
+    },
+    "region": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Region"
+    },
+    "priority": {
+      "$ref": "#/$defs/Priority"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Notes"
+    },
+    "version": {
+      "title": "Version",
+      "type": "integer"
+    },
+    "connectors": {
+      "items": {
+        "$ref": "#/$defs/ConnectorOut"
+      },
+      "title": "Connectors",
+      "type": "array"
+    },
+    "detected_connector": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DetectedConnectorOut"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "careers_url",
+    "region",
+    "priority",
+    "notes",
+    "version",
+    "connectors",
+    "detected_connector",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "CompanyOut",
+  "type": "object"
+}

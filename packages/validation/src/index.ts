@@ -7,6 +7,8 @@ import {
   type CareerDocument,
   type CareerFact,
   type CareerProfile,
+  type Company,
+  type CompanyList,
   type DocumentList,
   type FactType,
   type HealthCheckResult,
@@ -267,3 +269,68 @@ export const careerProfileSchema = z
   .strict() satisfies z.ZodType<CareerProfile>;
 
 export const bulkUpdateResultSchema = z.object({ updated: z.int().nonnegative() }).strict();
+
+// ---------------------------------------------------------------- companies
+
+const connectorTypeSchema = z.enum(["careers_page", "greenhouse", "lever", "ashby"]);
+
+export const companySchema = z
+  .object({
+    id: z.uuid(),
+    name: z.string().max(200),
+    careers_url: z.string().max(2048).nullable(),
+    region: z.string().max(100).nullable(),
+    priority: z.enum(["high", "medium", "low"]),
+    notes: z.string().max(2000).nullable(),
+    version: z.int().positive(),
+    connectors: z.array(
+      z
+        .object({
+          id: z.uuid(),
+          connector_type: connectorTypeSchema,
+          config: z.record(z.string(), z.string()),
+          enabled: z.boolean(),
+          created_at: isoDateTime,
+          updated_at: isoDateTime,
+        })
+        .strict(),
+    ),
+    detected_connector: z
+      .object({ connector_type: connectorTypeSchema, config: z.record(z.string(), z.string()) })
+      .strict()
+      .nullable(),
+    created_at: isoDateTime,
+    updated_at: isoDateTime,
+  })
+  .strict() satisfies z.ZodType<Company>;
+
+export const companyListSchema = z
+  .object({ companies: z.array(companySchema) })
+  .strict() satisfies z.ZodType<CompanyList>;
+
+/**
+ * Company form. The server is the authority on URL safety (public https
+ * host, no IPs or credentials) and explains rejections; this only catches
+ * obvious mistakes early. Messages are i18n keys.
+ */
+export const companyFormSchema = z.object({
+  name: z.string().trim().min(1, "company.error.nameRequired").max(200),
+  careers_url: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((v) => v === "" || !/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(v) || /^https:\/\//i.test(v), {
+      message: "company.error.https_required",
+    }),
+  region: z.string().trim().max(100),
+  priority: z.enum(["high", "medium", "low"]),
+  notes: z.string().trim().max(2000),
+});
+
+export type CompanyForm = z.infer<typeof companyFormSchema>;
+
+/** Public ATS identifiers: letters, digits, dot, dash, underscore. */
+export const connectorSlugSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/, "company.error.slug");

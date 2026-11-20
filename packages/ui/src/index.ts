@@ -11,6 +11,7 @@ export {
   TextField,
   type Tone,
 } from "./components";
+export { CompaniesPage } from "./companies/CompaniesPage";
 export { AccountPage, SystemStatusPage } from "./pages";
 export { CareerProfilePage } from "./profile/CareerProfilePage";
 export { FactEditor } from "./profile/FactEditor";
@@ -20,7 +21,9 @@ export {
   useAuth,
   useClientType,
   useI18n,
+  useOpenExternal,
   type AppProvidersProps,
+  type OpenExternal,
   type AuthValue,
   type ClientType,
 } from "./providers";

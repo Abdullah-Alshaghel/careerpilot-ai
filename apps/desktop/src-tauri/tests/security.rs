@@ -14,6 +14,9 @@ const ALLOWED_PERMISSIONS: &[&str] = &[
     "allow-load-refresh-token",
     "allow-store-refresh-token",
     "allow-clear-refresh-token",
+    // Phase 4: open company careers pages in the system browser. Scope pinned
+    // to https:// below (opener_can_only_open_https_urls).
+    "opener:allow-open-url",
 ];
 
 /// Commands the app registers. Each must be declared in build.rs's app
@@ -134,6 +137,30 @@ fn file_drops_go_to_the_page_not_to_native_handlers() {
         let conf = read_json(name);
         for window in conf["app"]["windows"].as_array().unwrap() {
             assert_eq!(window["dragDropEnabled"], Value::Bool(false), "{name}");
+        }
+    }
+}
+
+#[test]
+fn opener_can_only_open_https_urls() {
+    // Never file://, custom schemes or plain http: only web pages, in the
+    // user's default browser (the app never renders external content itself).
+    for file in capability_files() {
+        let cap = read_json(&file);
+        for perm in cap["permissions"].as_array().unwrap() {
+            let id = perm.as_str().or_else(|| perm["identifier"].as_str()).unwrap_or_default();
+            if !id.starts_with("opener:") {
+                continue;
+            }
+            assert_eq!(id, "opener:allow-open-url", "{file}: unexpected opener permission {id}");
+            let scopes = perm["allow"].as_array().expect("opener permission must carry an explicit scope");
+            assert!(!scopes.is_empty(), "{file}: empty opener scope");
+            for scope in scopes {
+                let url = scope["url"].as_str().unwrap_or_default();
+                assert_eq!(url, "https://*", "{file}: opener scope must be https:// only, got {url}");
+                assert!(scope.get("path").is_none(), "{file}: opener must not open local paths");
+            }
+            assert!(perm.get("deny").is_none() || perm["deny"].is_array(), "{file}");
         }
     }
 }

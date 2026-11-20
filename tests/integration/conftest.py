@@ -41,6 +41,7 @@ SERVICE_DATABASES = [
     ("identity-service", "identity", "identity_svc", "IDENTITY_DB_PASSWORD", "0002"),
     ("document-service", "documents", "documents_svc", "DOCUMENTS_DB_PASSWORD", "0001"),
     ("career-profile-service", "career_profile", "career_profile_svc", "CAREER_PROFILE_DB_PASSWORD", "0001"),
+    ("company-service", "companies", "companies_svc", "COMPANIES_DB_PASSWORD", "0001"),
 ]
 
 
@@ -85,6 +86,12 @@ def scratch_identity_db() -> Iterator[str]:
 @pytest.fixture(scope="module")
 def scratch_profile_db() -> Iterator[str]:
     with scratch_database("career-profile-service") as url:
+        yield url
+
+
+@pytest.fixture(scope="module")
+def scratch_companies_db() -> Iterator[str]:
+    with scratch_database("company-service") as url:
         yield url
 
 

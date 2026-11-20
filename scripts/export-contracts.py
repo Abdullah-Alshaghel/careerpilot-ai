@@ -22,12 +22,15 @@ BASE_ID = "https://contracts.careerpilot.ai/"
 
 def generated() -> dict[Path, dict]:
     from career_profile_service.schemas import ProfileOut
+    from company_service.schemas import CompanyList, CompanyOut
     from document_service.schemas import DocumentDeletedV1, DocumentList, DocumentOut, DocumentTextExtractedV1
 
     targets = {
         API / "document.v1.schema.json": (DocumentOut, "api/document.v1.schema.json"),
         API / "document-list.v1.schema.json": (DocumentList, "api/document-list.v1.schema.json"),
         API / "career-profile.v1.schema.json": (ProfileOut, "api/career-profile.v1.schema.json"),
+        API / "company.v1.schema.json": (CompanyOut, "api/company.v1.schema.json"),
+        API / "company-list.v1.schema.json": (CompanyList, "api/company-list.v1.schema.json"),
         EVENTS / "document.text_extracted.v1.schema.json": (
             DocumentTextExtractedV1,
             "events/payloads/document.text_extracted.v1.schema.json",
@@ -61,11 +64,11 @@ def main() -> int:
     for path, schema in generated().items():
         text = render(schema)
         if args.check:
-            if not path.exists() or path.read_text(encoding="utf-8") != text:
+            if not path.exists() or path.read_bytes().decode("utf-8") != text:
                 stale.append(path.relative_to(ROOT).as_posix())
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(text, encoding="utf-8")
+            path.write_bytes(text.encode("utf-8"))  # exact bytes: LF on every OS
             print(f"wrote {path.relative_to(ROOT).as_posix()}")
     if stale:
         print("stale contracts (run python scripts/export-contracts.py):", *stale, sep="\n  ", file=sys.stderr)

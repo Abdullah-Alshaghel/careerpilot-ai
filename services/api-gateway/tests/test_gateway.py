@@ -170,6 +170,7 @@ def test_public_health_ok():
         "identity-service": "up",
         "document-service": "up",
         "career-profile-service": "up",
+        "company-service": "up",
     }
 
 

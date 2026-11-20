@@ -1,0 +1,46 @@
+{
+  "companies": [
+    {
+      "id": "c1000000-0000-4000-8000-000000000001",
+      "name": "Acme Payments",
+      "careers_url": "https://boards.greenhouse.io/acme",
+      "region": "Riyadh",
+      "priority": "high",
+      "notes": "Referral from Sara",
+      "version": 3,
+      "connectors": [
+        {
+          "id": "d1000000-0000-4000-8000-000000000001",
+          "connector_type": "careers_page",
+          "config": {
+            "url": "https://acme.example/careers"
+          },
+          "enabled": true,
+          "created_at": "2026-11-20T10:00:00Z",
+          "updated_at": "2026-11-20T10:00:00Z"
+        }
+      ],
+      "detected_connector": {
+        "connector_type": "greenhouse",
+        "config": {
+          "board_token": "acme"
+        }
+      },
+      "created_at": "2026-11-20T09:55:00Z",
+      "updated_at": "2026-11-20T10:00:00Z"
+    },
+    {
+      "id": "c1000000-0000-4000-8000-000000000002",
+      "name": "Globex",
+      "careers_url": null,
+      "region": null,
+      "priority": "low",
+      "notes": null,
+      "version": 1,
+      "connectors": [],
+      "detected_connector": null,
+      "created_at": "2026-11-20T09:55:00Z",
+      "updated_at": "2026-11-20T10:00:00Z"
+    }
+  ]
+}

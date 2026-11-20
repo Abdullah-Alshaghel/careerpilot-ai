@@ -14,6 +14,8 @@ tauri = { version = "2", features = [] }
 # OS credential store for the session refresh token (Windows Credential
 # Manager, macOS Keychain). Linux is not a supported desktop target.
 keyring = { version = "3.6.3", features = ["apple-native", "windows-native"] }
+# Opens company careers pages in the system browser (scoped to https:// only).
+tauri-plugin-opener = "=2.7.2"
 
 [dev-dependencies]
 serde_json = "1"
