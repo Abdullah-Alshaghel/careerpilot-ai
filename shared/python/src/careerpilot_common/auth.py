@@ -23,6 +23,9 @@ from typing import Any
 import jwt
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from fastapi import Request
+
+from careerpilot_common.errors import ServiceError
 
 ISSUER = "careerpilot-identity"
 AUDIENCE = "careerpilot-api"
@@ -206,3 +209,38 @@ class JwksCache:
             return verify_access_token(token, await self.keys())
         except UnknownKeyError:
             return verify_access_token(token, await self.keys(force=True))
+
+
+def http_jwks_fetcher(http: Any, url: str) -> Callable[[], Awaitable[Mapping[str, Any]]]:
+    """Fetch Identity's JWKS with an ``httpx.AsyncClient``."""
+
+    async def fetch() -> Mapping[str, Any]:
+        resp = await http.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+    return fetch
+
+
+def require_user(get_cache: Callable[[Request], JwksCache]) -> Callable[[Request], Awaitable[AccessTokenClaims]]:
+    """FastAPI dependency: the verified caller, or a 401/503 error.
+
+    Every domain service uses this on every user-facing route, then scopes all
+    data access by ``claims.user_id`` (never by anything the client sends).
+    ``get_cache`` receives the request and returns the service's JwksCache.
+    """
+
+    challenge = {"WWW-Authenticate": "Bearer"}
+
+    async def dependency(request: Request) -> AccessTokenClaims:
+        token = bearer_token(request.headers.get("authorization"))
+        if token is None:
+            raise ServiceError(401, "unauthorized", "Sign in required", headers=challenge)
+        try:
+            return await get_cache(request).verify(token)
+        except TokenError as exc:
+            raise ServiceError(401, exc.code, "Sign in again", headers=challenge) from exc
+        except Exception as exc:
+            raise ServiceError(503, "auth_unavailable", "Sign-in is temporarily unavailable") from exc
+
+    return dependency

@@ -1,0 +1,89 @@
+{
+  "id": "b2000000-0000-4000-8000-000000000001",
+  "version": 7,
+  "updated_at": "2026-11-20T09:07:00Z",
+  "facts": [
+    {
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "fact_type": "personal",
+      "value": {
+        "field": "full_name",
+        "value": "Ada Lovelace"
+      },
+      "source": {
+        "document_id": "3d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d",
+        "name": "Ada CV 2026.pdf",
+        "excerpt": "Ada Lovelace"
+      },
+      "confidence": 0.6,
+      "verification_status": "extracted",
+      "valid_from": null,
+      "valid_to": null,
+      "created_at": "2026-11-20T09:00:05Z",
+      "updated_at": "2026-11-20T09:00:05Z"
+    },
+    {
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "fact_type": "employment",
+      "value": {
+        "title": "Senior Software Engineer",
+        "organization": "Acme Payments Inc",
+        "start": "2021-03",
+        "end": null,
+        "current": true,
+        "description": "Led the ledger migration"
+      },
+      "source": {
+        "document_id": "3d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d",
+        "name": "Ada CV 2026.pdf",
+        "excerpt": "Senior Software Engineer, Acme Payments Inc. Mar 2021 - Present"
+      },
+      "confidence": 0.75,
+      "verification_status": "user_verified",
+      "valid_from": "2021-03-01",
+      "valid_to": null,
+      "created_at": "2026-11-20T09:00:05Z",
+      "updated_at": "2026-11-20T09:05:00Z"
+    },
+    {
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "fact_type": "skill",
+      "value": {
+        "name": "Python"
+      },
+      "source": null,
+      "confidence": 1.0,
+      "verification_status": "user_verified",
+      "valid_from": null,
+      "valid_to": null,
+      "created_at": "2026-11-20T09:06:00Z",
+      "updated_at": "2026-11-20T09:06:00Z"
+    },
+    {
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "fact_type": "personal",
+      "value": {
+        "field": "full_name",
+        "value": "Ada King"
+      },
+      "source": {
+        "document_id": null,
+        "name": "old-cv.docx",
+        "excerpt": "Ada King"
+      },
+      "confidence": 0.6,
+      "verification_status": "extracted",
+      "valid_from": null,
+      "valid_to": null,
+      "created_at": "2026-11-20T09:07:00Z",
+      "updated_at": "2026-11-20T09:07:00Z"
+    }
+  ],
+  "conflicts": [
+    {
+      "kind": "multiple_values",
+      "fact_type": "personal",
+      "fact_ids": ["a1000000-0000-4000-8000-000000000001", "a1000000-0000-4000-8000-000000000004"]
+    }
+  ]
+}

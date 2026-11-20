@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/events/payloads/document.deleted.v1.schema.json",
+  "x-generated-from": "document_service.schemas.DocumentDeletedV1 (scripts/export-contracts.py)",
+  "additionalProperties": false,
+  "description": "Payload of ``document.deleted`` v1.",
+  "properties": {
+    "document_id": {
+      "format": "uuid",
+      "title": "Document Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "document_id"
+  ],
+  "title": "DocumentDeletedV1",
+  "type": "object"
+}

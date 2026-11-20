@@ -36,27 +36,59 @@ def admin_url(db: str) -> str:
     )
 
 
-def run_alembic(url: str, *args: str) -> None:
+# (service directory, database, owning role, password variable, migration head)
+SERVICE_DATABASES = [
+    ("identity-service", "identity", "identity_svc", "IDENTITY_DB_PASSWORD", "0002"),
+    ("document-service", "documents", "documents_svc", "DOCUMENTS_DB_PASSWORD", "0001"),
+    ("career-profile-service", "career_profile", "career_profile_svc", "CAREER_PROFILE_DB_PASSWORD", "0001"),
+]
+
+
+def run_alembic(url: str, *args: str, service: str = "identity-service") -> None:
     subprocess.run(  # noqa: S603
         [sys.executable, "-m", "alembic", "-x", f"url={url}", *args],
-        cwd=ROOT / "services" / "identity-service",
+        cwd=ROOT / "services" / service,
         check=True,
         capture_output=True,
     )
 
 
+def scratch_database(service: str):
+    """Context manager: a throwaway database migrated to the service's head."""
+    from contextlib import contextmanager
+
+    @contextmanager
+    def manager():
+        name = f"{service.split('-')[0]}_test_{uuid.uuid4().hex[:8]}"
+        admin = create_engine(admin_url("postgres"), isolation_level="AUTOCOMMIT")
+        with admin.connect() as conn:
+            conn.execute(text(f'CREATE DATABASE "{name}"'))
+        try:
+            url = admin_url(name)
+            run_alembic(url, "upgrade", "head", service=service)
+            yield url
+        finally:
+            with admin.connect() as conn:
+                conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+            admin.dispose()
+
+    return manager()
+
+
 @pytest.fixture(scope="module")
 def scratch_identity_db() -> Iterator[str]:
     """A throwaway, fully migrated identity database; yields its URL."""
-    name = f"identity_test_{uuid.uuid4().hex[:8]}"
-    admin = create_engine(admin_url("postgres"), isolation_level="AUTOCOMMIT")
-    with admin.connect() as conn:
-        conn.execute(text(f'CREATE DATABASE "{name}"'))
-    try:
-        url = admin_url(name)
-        run_alembic(url, "upgrade", "head")
+    with scratch_database("identity-service") as url:
         yield url
-    finally:
-        with admin.connect() as conn:
-            conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
-        admin.dispose()
+
+
+@pytest.fixture(scope="module")
+def scratch_profile_db() -> Iterator[str]:
+    with scratch_database("career-profile-service") as url:
+        yield url
+
+
+@pytest.fixture(scope="module")
+def scratch_documents_db() -> Iterator[str]:
+    with scratch_database("document-service") as url:
+        yield url

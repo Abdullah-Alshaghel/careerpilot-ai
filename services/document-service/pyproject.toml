@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "careerpilot-document-service"
+version = "0.1.0"
+description = "Documents: secure upload, type checks, isolated text extraction. Owns the `documents` database."
+requires-python = ">=3.10"
+dependencies = [
+    "careerpilot-common[postgres,rabbitmq,telemetry,auth]",
+    "alembic==1.20.1",
+    "uvicorn[standard]==0.54.0",
+    "python-multipart==0.0.32",
+    "boto3==1.44.7",
+    "pypdf==7.1.1",
+    "python-docx==1.2.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

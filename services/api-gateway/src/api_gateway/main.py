@@ -81,7 +81,12 @@ def create_app(settings: GatewaySettings | None = None) -> FastAPI:
     app = create_service_app(
         settings,
         checks=lambda: _checks_for(app),
-        routers=[public, build_proxy_router(settings.route_table(), settings.max_request_body_bytes, policy)],
+        routers=[
+            public,
+            build_proxy_router(
+                settings.route_table(), settings.max_request_body_bytes, policy, settings.route_timeouts()
+            ),
+        ],
         lifespan=lifespan,
     )
     app.state.settings = settings

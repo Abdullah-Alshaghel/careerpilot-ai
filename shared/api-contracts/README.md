@@ -8,7 +8,11 @@ Language-neutral source of truth for public API shapes.
   are tested against these files, so a drift on either side fails CI
   (`tests/contract/` and `packages/validation/src/*.test.ts`).
 
-Current contracts: `health.v1`, `user.v1` (`GET /v1/users/me`), `auth-token.v1`
+Generated from service models (`python scripts/export-contracts.py`; do not edit by hand):
+`document.v1`, `document-list.v1`, `career-profile.v1`, and the event payloads in
+`shared/event-schemas/payloads/`.
+
+Hand-written: `health.v1`, `user.v1` (`GET /v1/users/me`), `auth-token.v1`
 (`POST /v1/auth/register|login|refresh`) and `auth-session.v1` (the web server's
 `/api/session/*`, which never includes the refresh token).
 

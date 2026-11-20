@@ -10,6 +10,8 @@ const WEB_URL = process.env.E2E_WEB_URL ?? "http://localhost:3000";
 export default defineConfig({
   testDir: "./web",
   fullyParallel: true,
+  // Live specs share one backend (and one rate-limit IP); keep their load modest.
+  workers: process.env.E2E_LIVE === "1" ? 2 : undefined,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],

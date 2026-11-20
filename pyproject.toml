@@ -14,9 +14,12 @@ ignore = ["RUF012"]
 "**/tests/**" = ["S101", "S105", "S106"]
 "tests/**" = ["S101", "S105", "S106"]
 "**/migrations/**" = ["E501"]
+# CV parsing must match typographic dashes and bullets that real CVs contain.
+"services/career-profile-service/src/career_profile_service/parser.py" = ["RUF001"]
+"services/career-profile-service/tests/**" = ["S101", "RUF001"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["careerpilot_common", "api_gateway", "identity_service", "tests"]
+known-first-party = ["careerpilot_common", "api_gateway", "identity_service", "document_service", "career_profile_service", "tests"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -ra"

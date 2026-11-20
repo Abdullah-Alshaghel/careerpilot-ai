@@ -40,4 +40,20 @@ export async function mockApi(page: Page, { signedIn }: { signedIn: boolean }) {
       : route.fulfill({ status: 401, json: errorBody("no_session") }),
   );
   await page.route("**/api/session/logout", (route) => route.fulfill({ status: 204 }));
+  await page.route("**/v1/documents", (route) => route.fulfill({ json: { documents: [] } }));
+  await page.route("**/v1/profile", (route) => route.fulfill({ json: emptyProfile }));
+}
+
+export const emptyProfile = {
+  id: "b2000000-0000-4000-8000-000000000001",
+  version: 1,
+  updated_at: "2026-11-20T09:00:00Z",
+  facts: [],
+  conflicts: [],
+};
+
+/** Open the app signed in and go to System status (the profile page is the landing page). */
+export async function openStatusPage(page: Page) {
+  await page.goto("/");
+  await page.getByTestId("nav-status").click();
 }

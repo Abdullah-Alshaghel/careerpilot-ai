@@ -28,6 +28,14 @@ export const healthyBody = {
   ],
 };
 
+export const emptyProfile = {
+  id: "b2000000-0000-4000-8000-000000000001",
+  version: 1,
+  updated_at: "2026-11-20T09:00:00Z",
+  facts: [],
+  conflicts: [],
+};
+
 export function tokensFor(user: typeof ADA, n = 1) {
   return {
     access_token: `access-${user.id}-${n}`,
@@ -68,7 +76,7 @@ export function fakeGateway(routes: Record<string, Route>) {
   return vi.fn<FetchLike>(async (url, init) => {
     const path = new URL(url).pathname;
     const key = `${init?.method ?? "GET"} ${path}`;
-    const body = init?.body ? JSON.parse(init.body as string) : undefined;
+    const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
     const handler = routes[key] ?? (key === "GET /v1/health" ? () => json(healthyBody) : null);
     if (!handler) return apiError(404, "not_found");
     return handler(body, init);

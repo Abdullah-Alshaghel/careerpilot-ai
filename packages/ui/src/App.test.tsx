@@ -5,6 +5,7 @@ import {
   ADA,
   apiError,
   fakeGateway,
+  emptyProfile,
   healthyBody,
   json,
   MemoryStore,
@@ -247,19 +248,24 @@ describe("session lifecycle", () => {
 });
 
 describe("system status (signed in)", () => {
-  function signedIn(
+  /** Signed in, on the System status page. */
+  async function signedIn(
     health: () => Response | Promise<Response>,
     clientType: "desktop" | "web" = "web",
   ) {
     const fetch = fakeGateway({
       "POST /v1/auth/refresh": () => json(tokensFor(ADA, 2)),
       "GET /v1/health": health,
+      "GET /v1/documents": () => json({ documents: [] }),
+      "GET /v1/profile": () => json(emptyProfile),
     });
-    return renderApp(fetch, new MemoryStore(tokensFor(ADA).refresh_token), clientType);
+    const view = renderApp(fetch, new MemoryStore(tokensFor(ADA).refresh_token), clientType);
+    fireEvent.click(await screen.findByTestId("nav-status"));
+    return view;
   }
 
   it("shows healthy checks", async () => {
-    signedIn(() => json(healthyBody));
+    await signedIn(() => json(healthyBody));
     await waitFor(() =>
       expect(screen.getByTestId("health-status")).toHaveAttribute("data-state", "ok"),
     );
@@ -267,7 +273,7 @@ describe("system status (signed in)", () => {
   });
 
   it("shows degraded status", async () => {
-    signedIn(() =>
+    await signedIn(() =>
       json({
         ...healthyBody,
         status: "degraded",
@@ -282,7 +288,7 @@ describe("system status (signed in)", () => {
 
   it("shows an unreachable state and recovers on retry", async () => {
     let fail = true;
-    signedIn(() => {
+    await signedIn(() => {
       if (fail) throw new TypeError("Failed to fetch");
       return json(healthyBody);
     });
@@ -300,7 +306,7 @@ describe("system status (signed in)", () => {
   });
 
   it("switches to Arabic with RTL direction and persists the preference", async () => {
-    signedIn(() => json(healthyBody), "desktop");
+    await signedIn(() => json(healthyBody), "desktop");
     await screen.findByTestId("signed-in-user");
     expect(screen.getByTestId("client-type")).toHaveTextContent("Desktop app");
 

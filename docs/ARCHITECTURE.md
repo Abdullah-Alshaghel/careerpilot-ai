@@ -29,10 +29,10 @@ Authoritative reference: `CareerPilot_AI_Technical_Architecture_v1.1_Desktop_Web
 | `packages/ui` | Design tokens, components, app shell, shared screens |
 | `packages/i18n` | en/ar dictionaries, RTL/LTR, formatting |
 | `packages/config` | Shared tsconfig |
-| `services/*` | FastAPI domain services (implemented: `api-gateway`, `identity-service`) |
+| `services/*` | FastAPI domain services (implemented: `api-gateway`, `identity-service`, `document-service`, `career-profile-service`); each service with background work also runs a worker process from the same image |
 | `apps/web/src/server` | Web server-only code: session endpoints that hold the refresh-token cookie (ADR-014) |
 | `agents/*` | LangGraph agents (Phase 5+) |
-| `shared/python` | `careerpilot_common`: config, JSON logging + redaction, correlation IDs, health, errors, event envelope, access-token verification. **No domain models.** |
+| `shared/python` | `careerpilot_common`: config, JSON logging + redaction, correlation IDs, health, errors, event envelope, access-token verification (`require_user`), messaging (outbox, relay, consumers). **No domain models.** |
 | `shared/api-contracts`, `shared/event-schemas` | Language-neutral JSON Schemas + canonical examples |
 | `infrastructure/*` | Postgres init, RabbitMQ config, SeaweedFS entrypoint, monitoring |
 | `tests/contract`, `tests/integration`, `tests/e2e` | Cross-cutting test suites |
@@ -70,6 +70,17 @@ Each records a reversible default chosen where the brief left a gap.
 **ADR-014 — Web sessions via the web app's own server.** `POST /api/session/{login,register,refresh,logout}` (Next.js route handlers) call the gateway, keep the refresh token in an `HttpOnly; Secure; SameSite=Strict; Path=/api/session` cookie and return only the access token. Page scripts, including any injected by XSS, cannot read the long-lived credential. When several tabs refresh at once, Identity allows a 15 s reuse grace and the web server answers `409 refresh_token_superseded` without touching the cookie, so the losing tab retries with the new one.
 
 **ADR-015 — Readiness probes reuse one RabbitMQ connection.** Opening an AMQP connection per probe made readiness flap under load (found by the Phase 2 live E2E run). `careerpilot_common.health.RabbitMQProbe` keeps one connection and reopens it only after it closes.
+
+**ADR-016 — Rule-based CV extraction first (user decision, Phase 3).** Facts are suggested by a deterministic parser (English and Arabic headings, common CV layouts). It runs offline and sends CV text to no third party; its lower accuracy is acceptable because every suggestion must be approved by the user anyway. AI extraction arrives with the Phase 6 LangGraph agents and will produce the same `extracted` suggestions through the same review flow.
+
+**ADR-017 — The database is the extraction queue.** Upload stores the file and a `documents` row (`status=uploaded`); the worker claims rows with `FOR UPDATE SKIP LOCKED`. No message is needed to start work, so nothing is lost if RabbitMQ is down at upload time, replicas never collide, and a crashed worker's document is retried after a stale timeout (bounded attempts). Each file is parsed in a fresh child process with a timeout and a memory cap, because parsers for untrusted files are an attack surface.
+
+**ADR-018 — Extracted text travels in the event payload.** `document.text_extracted` carries the text (≤ 200 000 characters) so the Career Profile Service never reads another service's bucket or database (data ownership) and needs no service-to-service credentials. The broker is internal and messages are consumed and acknowledged, not retained. The payload key is log-redacted. Revisit with a short-lived signed URL if payloads grow (OCR, many pages).
+
+**ADR-019 — Contracts generated from the services' models.** For Phase 3 onward, JSON Schemas in `shared/` are generated from the Pydantic models (`scripts/export-contracts.py`); a contract test fails if a model changes without regenerating, if a canonical example breaks, or if a consumer's copy of an event payload disagrees with the producer's. The TypeScript Zod schemas are checked against the same examples. Health and auth contracts stay hand-written.
+
+**ADR-020 — Duplicates versus conflicts.** A suggested fact that matches an existing one in identity *and* details is dropped as a duplicate; one that matches in identity but differs in details (job dates, a second name, a language level) is kept and reported as a conflict. The service never resolves a conflict itself (architecture §7).
+
 
 ## Service template (what every service has)
 

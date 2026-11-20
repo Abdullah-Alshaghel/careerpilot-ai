@@ -165,7 +165,12 @@ def test_public_health_ok():
     body = resp.json()
     assert body["service"] == "api-gateway"
     assert body["status"] == "ok"
-    assert {c["name"]: c["status"] for c in body["checks"]} == {"redis": "up", "identity-service": "up"}
+    assert {c["name"]: c["status"] for c in body["checks"]} == {
+        "redis": "up",
+        "identity-service": "up",
+        "document-service": "up",
+        "career-profile-service": "up",
+    }
 
 
 def test_public_health_degraded_is_still_200_but_ready_is_503():
@@ -280,6 +285,20 @@ def test_proxy_upstream_timeout_is_504():
 )
 def test_resolve_upstream_longest_prefix(path, expected):
     assert resolve_upstream(path, {"/v1/auth": "A", "/v1/auth/admin": "B"}) == expected
+
+
+def test_uploads_get_a_longer_upstream_timeout():
+    seen: dict[str, object] = {}
+
+    def upstream(request: httpx.Request) -> httpx.Response:
+        seen[f"{request.method} {request.url.path}"] = request.extensions["timeout"]["read"]
+        return httpx.Response(200, stream=_Stream(b"{}"))
+
+    with make_client(upstream, upstream_timeout_seconds=15, upload_timeout_seconds=60) as client:
+        client.post("/v1/documents", headers=auth(), files={"file": ("cv.txt", b"x")})
+        client.get("/v1/documents", headers=auth())
+    assert seen["POST /v1/documents"] == 60
+    assert seen["GET /v1/documents"] != 60  # everything else keeps the client default
 
 
 # ------------------------------------------------------------ authentication

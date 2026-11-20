@@ -12,6 +12,8 @@ export {
   type Tone,
 } from "./components";
 export { AccountPage, SystemStatusPage } from "./pages";
+export { CareerProfilePage } from "./profile/CareerProfilePage";
+export { FactEditor } from "./profile/FactEditor";
 export { usePreferences } from "./preferences";
 export {
   AppProviders,

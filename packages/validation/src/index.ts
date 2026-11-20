@@ -4,6 +4,11 @@ import {
   PASSWORD_MIN_LENGTH,
   type ApiErrorBody,
   type BrowserSession,
+  type CareerDocument,
+  type CareerFact,
+  type CareerProfile,
+  type DocumentList,
+  type FactType,
   type HealthCheckResult,
   type HealthResponse,
   type TokenResponse,
@@ -123,3 +128,142 @@ export const registerFormSchema = z
 
 export type LoginForm = z.infer<typeof loginFormSchema>;
 export type RegisterForm = z.infer<typeof registerFormSchema>;
+
+// --------------------------------------------------------------- documents
+
+const isoDateTime = z.iso.datetime({ offset: true });
+
+export const documentSchema = z
+  .object({
+    id: z.uuid(),
+    filename: z.string().max(255),
+    mime_type: z.enum([
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/plain",
+    ]),
+    size_bytes: z.int().nonnegative(),
+    status: z.enum(["uploaded", "processing", "extracted", "failed"]),
+    failure_reason: z.string().max(64).nullable(),
+    created_at: isoDateTime,
+    updated_at: isoDateTime,
+  })
+  .strict() satisfies z.ZodType<CareerDocument>;
+
+export const documentListSchema = z
+  .object({ documents: z.array(documentSchema) })
+  .strict() satisfies z.ZodType<DocumentList>;
+
+// ----------------------------------------------------------- career profile
+
+export const factTypeSchema = z.enum([
+  "personal",
+  "summary",
+  "employment",
+  "education",
+  "skill",
+  "certification",
+  "language",
+]);
+
+const partialDate = z.string().regex(/^(19|20)\d{2}(-(0[1-9]|1[0-2]))?$/, "profile.error.date");
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((v) => (v === "" ? null : v))
+    .nullable();
+const optionalDate = z
+  .string()
+  .trim()
+  .transform((v) => (v === "" ? null : v))
+  .pipe(partialDate.nullable())
+  .nullable();
+const required = (max: number) => z.string().trim().min(1, "profile.error.required").max(max);
+
+/**
+ * Per-type value schemas. They mirror the Career Profile Service's rules and
+ * are used by the fact editor; the server validates again on every write.
+ */
+export const factValueSchemas = {
+  personal: z
+    .object({
+      field: z.enum(["full_name", "email", "phone", "location", "link"]),
+      value: required(300),
+    })
+    .strict(),
+  summary: z.object({ text: required(2000) }).strict(),
+  employment: z
+    .object({
+      title: required(200),
+      organization: optionalText(200),
+      start: optionalDate,
+      end: optionalDate,
+      current: z.boolean(),
+      description: optionalText(2000),
+    })
+    .strict(),
+  education: z
+    .object({
+      degree: optionalText(200),
+      institution: optionalText(200),
+      start: optionalDate,
+      end: optionalDate,
+    })
+    .strict()
+    .refine((v) => Boolean(v.degree || v.institution), {
+      message: "profile.error.degreeOrInstitution",
+      path: ["degree"],
+    }),
+  skill: z.object({ name: required(80) }).strict(),
+  certification: z
+    .object({
+      name: required(200),
+      year: z.int().min(1950, "profile.error.year").max(2100, "profile.error.year").nullable(),
+    })
+    .strict(),
+  language: z.object({ name: required(60), level: optionalText(60) }).strict(),
+} as const satisfies Record<FactType, z.ZodType>;
+
+export const careerFactSchema = z
+  .object({
+    id: z.uuid(),
+    fact_type: factTypeSchema,
+    value: z.record(z.string(), z.unknown()),
+    source: z
+      .object({
+        document_id: z.uuid().nullable(),
+        name: z.string().nullable(),
+        excerpt: z.string().nullable(),
+      })
+      .strict()
+      .nullable(),
+    confidence: z.number().min(0).max(1),
+    verification_status: z.enum(["extracted", "user_verified", "rejected"]),
+    valid_from: z.iso.date().nullable(),
+    valid_to: z.iso.date().nullable(),
+    created_at: isoDateTime,
+    updated_at: isoDateTime,
+  })
+  .strict() satisfies z.ZodType<CareerFact>;
+
+export const careerProfileSchema = z
+  .object({
+    id: z.uuid(),
+    version: z.int().positive(),
+    updated_at: isoDateTime,
+    facts: z.array(careerFactSchema),
+    conflicts: z.array(
+      z
+        .object({
+          kind: z.enum(["multiple_values", "different_dates", "different_details"]),
+          fact_type: factTypeSchema,
+          fact_ids: z.array(z.uuid()),
+        })
+        .strict(),
+    ),
+  })
+  .strict() satisfies z.ZodType<CareerProfile>;
+
+export const bulkUpdateResultSchema = z.object({ updated: z.int().nonnegative() }).strict();

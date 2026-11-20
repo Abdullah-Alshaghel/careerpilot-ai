@@ -91,7 +91,12 @@ class _BodyReader:
         return self._body
 
 
-def build_proxy_router(routes: dict[str, str], max_body_bytes: int, policy: EdgePolicy) -> APIRouter:
+def build_proxy_router(
+    routes: dict[str, str],
+    max_body_bytes: int,
+    policy: EdgePolicy,
+    timeouts: dict[tuple[str, str], float] | None = None,
+) -> APIRouter:
     router = APIRouter()
 
     @router.api_route("/v1/{path:path}", methods=_METHODS, include_in_schema=False)
@@ -118,6 +123,11 @@ def build_proxy_router(routes: dict[str, str], max_body_bytes: int, policy: Edge
             params=request.query_params.multi_items(),
             headers=_forward_headers(request, policy.client_ip(request), admission.headers),
             content=body,
+            **(
+                {"timeout": timeouts[(request.method, full_path)]}
+                if timeouts and (request.method, full_path) in timeouts
+                else {}
+            ),
         )
         try:
             upstream_response = await client.send(upstream_request, stream=True)

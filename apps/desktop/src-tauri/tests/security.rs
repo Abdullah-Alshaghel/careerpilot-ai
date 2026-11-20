@@ -124,3 +124,16 @@ fn production_channel_is_https_only_and_distinct_from_dev() {
         );
     }
 }
+
+#[test]
+fn file_drops_go_to_the_page_not_to_native_handlers() {
+    // The CV upload zone uses HTML drag-and-drop. With Tauri's native handler
+    // disabled, a dropped file reaches only the page's own upload code (which
+    // validates it and sends it to the backend); no native path is exposed.
+    for name in ["tauri.conf.json", "tauri.production.conf.json"] {
+        let conf = read_json(name);
+        for window in conf["app"]["windows"].as_array().unwrap() {
+            assert_eq!(window["dragDropEnabled"], Value::Bool(false), "{name}");
+        }
+    }
+}

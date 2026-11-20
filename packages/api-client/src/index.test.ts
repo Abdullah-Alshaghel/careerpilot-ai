@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError, createApiClient, type FetchLike } from "./index";
+import { profileMayChange } from "./react";
 
 const user = {
   id: "6f1c2b9e-3d4a-4b8e-9a7c-2e5d1f0a9b31",
@@ -224,5 +225,110 @@ describe("authentication", () => {
       code: "rate_limited",
       retryAfter: 120,
     });
+  });
+});
+
+describe("documents and profile", () => {
+  const doc = {
+    id: "3d2c1b0a-9e8f-4a7b-8c6d-5e4f3a2b1c0d",
+    filename: "cv.pdf",
+    mime_type: "application/pdf",
+    size_bytes: 10,
+    status: "uploaded",
+    failure_reason: null,
+    created_at: "2026-11-20T09:00:00Z",
+    updated_at: "2026-11-20T09:00:00Z",
+  };
+
+  it("uploads files as multipart with the bearer token and no JSON content type", async () => {
+    const fetch = vi.fn<FetchLike>(async () => jsonResponse(doc, 201));
+    const client = createApiClient({
+      baseUrl: "http://localhost:8080",
+      fetch,
+      clientType: "web",
+      getAccessToken: () => "tok",
+    });
+    const file = new Blob(["%PDF-1.7"], { type: "application/pdf" });
+    await expect(client.documents.upload(file, "cv.pdf")).resolves.toEqual(doc);
+
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(url).toBe("http://localhost:8080/v1/documents");
+    const headers = init!.headers as Record<string, string>;
+    expect(headers["content-type"]).toBeUndefined();
+    expect(headers.authorization).toBe("Bearer tok");
+    const form = init!.body as FormData;
+    expect((form.get("file") as File).name).toBe("cv.pdf");
+  });
+
+  it("surfaces upload rejections with their codes", async () => {
+    const fetch = vi.fn<FetchLike>(async () =>
+      jsonResponse(
+        { error: { code: "macro_document", message: "No macros", correlation_id: null } },
+        415,
+      ),
+    );
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(client.documents.upload(new Blob(["x"]), "cv.docm")).rejects.toMatchObject({
+      status: 415,
+      code: "macro_document",
+    });
+  });
+
+  it("escapes ids in paths and sends review decisions", async () => {
+    const fetch = vi.fn<FetchLike>(async () => jsonResponse({ updated: 2 }));
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(client.profile.setStatus(["a", "b"], "rejected")).resolves.toBe(2);
+    expect(JSON.parse(fetch.mock.calls[0]![1]!.body as string)).toEqual({
+      fact_ids: ["a", "b"],
+      verification_status: "rejected",
+    });
+
+    const del = vi.fn<FetchLike>(async () => new Response(null, { status: 204 }));
+    const client2 = createApiClient({
+      baseUrl: "http://localhost:8080",
+      fetch: del,
+      clientType: "web",
+    });
+    await client2.documents.remove("../../admin");
+    expect(del.mock.calls[0]![0]).toBe("http://localhost:8080/v1/documents/..%2F..%2Fadmin");
+  });
+});
+
+describe("profileMayChange", () => {
+  const now = Date.parse("2026-11-20T09:00:30Z");
+  const document = (status: string, updated = "2026-11-20T09:00:00Z") => ({
+    id: "d1",
+    filename: "cv.pdf",
+    mime_type: "application/pdf" as const,
+    size_bytes: 1,
+    status: status as "extracted",
+    failure_reason: null,
+    created_at: updated,
+    updated_at: updated,
+  });
+  const profile = (documentIds: string[]) => ({
+    id: "p",
+    version: 1,
+    updated_at: "2026-11-20T09:00:00Z",
+    conflicts: [],
+    facts: documentIds.map((id) => ({ source: { document_id: id } })),
+  });
+
+  it("polls while documents are read and until their suggestions arrive", () => {
+    expect(profileMayChange({ documents: [document("processing")] }, undefined, now)).toBe(true);
+    expect(
+      profileMayChange({ documents: [document("extracted")] }, profile([]) as never, now),
+    ).toBe(true);
+    expect(
+      profileMayChange({ documents: [document("extracted")] }, profile(["d1"]) as never, now),
+    ).toBe(false);
+  });
+
+  it("stops after the settle window even if a CV yielded nothing", () => {
+    const old = document("extracted", "2026-11-20T08:00:00Z");
+    expect(profileMayChange({ documents: [old] }, profile([]) as never, now)).toBe(false);
+    expect(profileMayChange({ documents: [document("failed")] }, profile([]) as never, now)).toBe(
+      false,
+    );
   });
 });

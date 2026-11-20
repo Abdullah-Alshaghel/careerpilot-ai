@@ -100,3 +100,127 @@ export type AuthErrorCode =
 /** Password rules enforced by the Identity Service (clients mirror them for early feedback). */
 export const PASSWORD_MIN_LENGTH = 12;
 export const PASSWORD_MAX_LENGTH = 128;
+
+// --------------------------------------------------------------- documents
+
+export type DocumentMimeType =
+  | "application/pdf"
+  | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  | "text/plain";
+
+/** uploaded = queued for extraction; processing; extracted; failed (see failure_reason) */
+export type DocumentStatus = "uploaded" | "processing" | "extracted" | "failed";
+
+/** document.v1 */
+export interface CareerDocument {
+  id: string;
+  filename: string;
+  mime_type: DocumentMimeType;
+  size_bytes: number;
+  status: DocumentStatus;
+  /** e.g. encrypted_pdf, no_text, unreadable_file, timeout, too_complex, processing_failed */
+  failure_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** document-list.v1 */
+export interface DocumentList {
+  documents: CareerDocument[];
+}
+
+/** Upload limits enforced by the Document Service (mirrored for early feedback). */
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const ACCEPTED_UPLOAD_EXTENSIONS = [".pdf", ".docx", ".txt"] as const;
+
+// ----------------------------------------------------------- career profile
+
+export type FactType =
+  "personal" | "summary" | "employment" | "education" | "skill" | "certification" | "language";
+
+/** extracted = suggested by a parser and NOT yet a fact; the user approves or rejects it. */
+export type VerificationStatus = "extracted" | "user_verified" | "rejected";
+
+/** "YYYY" or "YYYY-MM" */
+export type PartialDate = string;
+
+export interface PersonalValue {
+  field: "full_name" | "email" | "phone" | "location" | "link";
+  value: string;
+}
+export interface SummaryValue {
+  text: string;
+}
+export interface EmploymentValue {
+  title: string;
+  organization: string | null;
+  start: PartialDate | null;
+  end: PartialDate | null;
+  current: boolean;
+  description: string | null;
+}
+export interface EducationValue {
+  degree: string | null;
+  institution: string | null;
+  start: PartialDate | null;
+  end: PartialDate | null;
+}
+export interface SkillValue {
+  name: string;
+}
+export interface CertificationValue {
+  name: string;
+  year: number | null;
+}
+export interface LanguageValue {
+  name: string;
+  level: string | null;
+}
+
+export interface FactValueByType {
+  personal: PersonalValue;
+  summary: SummaryValue;
+  employment: EmploymentValue;
+  education: EducationValue;
+  skill: SkillValue;
+  certification: CertificationValue;
+  language: LanguageValue;
+}
+
+export interface FactSource {
+  /** null when the source document was deleted (the excerpt is kept) */
+  document_id: string | null;
+  name: string | null;
+  excerpt: string | null;
+}
+
+export interface CareerFact {
+  id: string;
+  fact_type: FactType;
+  /** Shape depends on fact_type (FactValueByType); validated per type on write. */
+  value: Record<string, unknown>;
+  /** null = entered by the user */
+  source: FactSource | null;
+  /** 0..1, how sure the extraction rule was */
+  confidence: number;
+  verification_status: VerificationStatus;
+  valid_from: string | null;
+  valid_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FactConflict {
+  kind: "multiple_values" | "different_dates" | "different_details";
+  fact_type: FactType;
+  fact_ids: string[];
+}
+
+/** GET /v1/profile (career-profile.v1) */
+export interface CareerProfile {
+  id: string;
+  version: number;
+  updated_at: string;
+  facts: CareerFact[];
+  conflicts: FactConflict[];
+}

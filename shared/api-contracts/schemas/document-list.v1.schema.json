@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/document-list.v1.schema.json",
+  "x-generated-from": "document_service.schemas.DocumentList (scripts/export-contracts.py)",
+  "$defs": {
+    "DocumentOut": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "filename": {
+          "title": "Filename",
+          "type": "string"
+        },
+        "mime_type": {
+          "enum": [
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "text/plain"
+          ],
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "size_bytes": {
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/DocumentStatus"
+        },
+        "failure_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Failure Reason"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "filename",
+        "mime_type",
+        "size_bytes",
+        "status",
+        "failure_reason",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "DocumentOut",
+      "type": "object"
+    },
+    "DocumentStatus": {
+      "enum": [
+        "uploaded",
+        "processing",
+        "extracted",
+        "failed"
+      ],
+      "title": "DocumentStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "documents": {
+      "items": {
+        "$ref": "#/$defs/DocumentOut"
+      },
+      "title": "Documents",
+      "type": "array"
+    }
+  },
+  "required": [
+    "documents"
+  ],
+  "title": "DocumentList",
+  "type": "object"
+}

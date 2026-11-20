@@ -54,6 +54,17 @@ export function formatDate(iso: string, locale: Locale): string {
   );
 }
 
+/** "2021-03" -> "Mar 2021" / "مارس 2021"; "2021" -> "2021". */
+export function formatPartialDate(value: string, locale: Locale): string {
+  const match = /^(\d{4})(?:-(\d{2}))?$/.exec(value);
+  if (!match) return value;
+  if (!match[2]) return match[1]!;
+  const tag = locale === "ar" ? "ar-u-nu-latn" : "en-GB";
+  return new Intl.DateTimeFormat(tag, { year: "numeric", month: "short", timeZone: "UTC" }).format(
+    new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)),
+  );
+}
+
 /** Apply lang/dir to the document root (call from the host app on locale change). */
 export function applyDocumentLocale(locale: Locale, doc: Document = document): void {
   doc.documentElement.lang = locale;

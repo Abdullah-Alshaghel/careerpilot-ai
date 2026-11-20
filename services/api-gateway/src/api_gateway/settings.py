@@ -18,7 +18,11 @@ class GatewaySettings(ServiceSettings):
 
     redis_url: SecretStr = SecretStr("redis://127.0.0.1:6379/0")
     identity_service_url: str = "http://127.0.0.1:8101"
+    document_service_url: str = "http://127.0.0.1:8102"
+    career_profile_service_url: str = "http://127.0.0.1:8103"
     upstream_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
+    # File uploads (up to 10 MB, possibly from slow connections) get longer.
+    upload_timeout_seconds: float = Field(default=60.0, gt=0, le=300)
     # CV/document uploads are capped at 10 MB by the Document Service; allow
     # multipart overhead on top.
     max_request_body_bytes: int = Field(default=12 * 1024 * 1024, gt=0)
@@ -70,7 +74,13 @@ class GatewaySettings(ServiceSettings):
         return {
             "/v1/auth": self.identity_service_url,
             "/v1/users": self.identity_service_url,
+            "/v1/documents": self.document_service_url,
+            "/v1/profile": self.career_profile_service_url,
         }
+
+    def route_timeouts(self) -> dict[tuple[str, str], float]:
+        """Per-route upstream timeouts (method, exact path); others use the default."""
+        return {("POST", "/v1/documents"): self.upload_timeout_seconds}
 
     def jwks_url(self) -> str:
         return self.identity_service_url.rstrip("/") + "/.well-known/jwks.json"
@@ -93,4 +103,8 @@ class GatewaySettings(ServiceSettings):
 
     def downstream_services(self) -> dict[str, str]:
         """Services whose readiness is reported by GET /v1/health."""
-        return {"identity-service": self.identity_service_url}
+        return {
+            "identity-service": self.identity_service_url,
+            "document-service": self.document_service_url,
+            "career-profile-service": self.career_profile_service_url,
+        }

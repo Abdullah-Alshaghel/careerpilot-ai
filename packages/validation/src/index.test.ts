@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   apiBaseUrlSchema,
   browserSessionSchema,
+  careerProfileSchema,
+  documentListSchema,
+  documentSchema,
+  factValueSchemas,
   healthResponseSchema,
   loginFormSchema,
   registerFormSchema,
@@ -113,5 +117,83 @@ describe("loginFormSchema", () => {
   it("requires both fields but does not judge password strength", () => {
     expect(loginFormSchema.safeParse({ email: "a@b.co", password: "x" }).success).toBe(true);
     expect(loginFormSchema.safeParse({ email: "", password: "" }).success).toBe(false);
+  });
+});
+
+describe("document and profile contracts", () => {
+  it.each([
+    ["document.json", documentSchema],
+    ["document-list.json", documentListSchema],
+    ["career-profile.json", careerProfileSchema],
+  ] as const)("accepts shared contract example %s", (file, schema) => {
+    const result = schema.safeParse(example(file));
+    expect(result.error?.issues ?? []).toEqual([]);
+  });
+
+  it("every example fact satisfies its per-type value schema", () => {
+    const profile = careerProfileSchema.parse(example("career-profile.json"));
+    for (const fact of profile.facts) {
+      expect(factValueSchemas[fact.fact_type].safeParse(fact.value).success).toBe(true);
+    }
+  });
+
+  it("rejects unknown document statuses and verification states", () => {
+    expect(
+      documentSchema.safeParse({ ...example("document.json"), status: "scanning" }).success,
+    ).toBe(false);
+    const profile = example("career-profile.json");
+    profile.facts[0].verification_status = "auto_verified";
+    expect(careerProfileSchema.safeParse(profile).success).toBe(false);
+  });
+});
+
+describe("factValueSchemas (editor)", () => {
+  it("normalizes empty optional fields to null", () => {
+    const job = factValueSchemas.employment.parse({
+      title: " Engineer ",
+      organization: "",
+      start: "2020-03",
+      end: "",
+      current: true,
+      description: "",
+    });
+    expect(job).toEqual({
+      title: "Engineer",
+      organization: null,
+      start: "2020-03",
+      end: null,
+      current: true,
+      description: null,
+    });
+  });
+
+  it.each([
+    [
+      "employment",
+      { title: "", organization: null, start: null, end: null, current: false, description: null },
+      "profile.error.required",
+    ],
+    [
+      "employment",
+      {
+        title: "x",
+        organization: null,
+        start: "March 2020",
+        end: null,
+        current: false,
+        description: null,
+      },
+      "profile.error.date",
+    ],
+    [
+      "education",
+      { degree: "", institution: "", start: null, end: null },
+      "profile.error.degreeOrInstitution",
+    ],
+    ["certification", { name: "CKA", year: 1800 }, "profile.error.year"],
+    ["skill", { name: "   " }, "profile.error.required"],
+  ] as const)("%s rejects %o", (type, value, message) => {
+    const result = factValueSchemas[type].safeParse(value);
+    expect(result.error?.issues[0]?.message).toBe(message);
   });
 });

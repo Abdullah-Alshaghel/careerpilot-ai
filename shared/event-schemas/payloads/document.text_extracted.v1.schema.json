@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/events/payloads/document.text_extracted.v1.schema.json",
+  "x-generated-from": "document_service.schemas.DocumentTextExtractedV1 (scripts/export-contracts.py)",
+  "additionalProperties": false,
+  "description": "Payload of ``document.text_extracted`` v1. Carries CV text: consumers\nmust never log it (``document_text`` is a redacted log key).",
+  "properties": {
+    "document_id": {
+      "format": "uuid",
+      "title": "Document Id",
+      "type": "string"
+    },
+    "filename": {
+      "maxLength": 255,
+      "title": "Filename",
+      "type": "string"
+    },
+    "mime_type": {
+      "maxLength": 127,
+      "title": "Mime Type",
+      "type": "string"
+    },
+    "parser_version": {
+      "maxLength": 32,
+      "title": "Parser Version",
+      "type": "string"
+    },
+    "document_text": {
+      "title": "Document Text",
+      "type": "string"
+    },
+    "truncated": {
+      "title": "Truncated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "document_id",
+    "filename",
+    "mime_type",
+    "parser_version",
+    "document_text",
+    "truncated"
+  ],
+  "title": "DocumentTextExtractedV1",
+  "type": "object"
+}

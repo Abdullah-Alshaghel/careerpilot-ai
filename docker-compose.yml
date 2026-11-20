@@ -19,6 +19,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
       POSTGRES_DB: postgres
       IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:?set in .env}
+      DOCUMENTS_DB_PASSWORD: ${DOCUMENTS_DB_PASSWORD:?run python scripts/init-env.py --update}
+      CAREER_PROFILE_DB_PASSWORD: ${CAREER_PROFILE_DB_PASSWORD:?run python scripts/init-env.py --update}
     volumes:
       - postgres-data:/var/lib/postgresql
       - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -58,10 +60,14 @@ services:
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
+    # A TCP check on the AMQP listener (opened only once boot completes).
+    # rabbitmq-diagnostics starts a whole Erlang VM per run, which cost
+    # 1-2 CPUs for about a second on every check.
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      test: ["CMD", "nc", "-z", "127.0.0.1", "5672"]
       interval: 10s
-      timeout: 10s
+      timeout: 5s
+      start_period: 30s
       retries: 20
 
   object-storage:
@@ -82,6 +88,25 @@ services:
       retries: 20
 
   # ------------------------------------------------------------- services
+  # Creates/updates every service database and role on each `up` (idempotent),
+  # so databases added in later phases also exist on older data volumes.
+  db-provision:
+    image: postgres:18.1-alpine
+    entrypoint: ["/bin/sh", "/opt/careerpilot/01-service-databases.sh"]
+    environment:
+      PGHOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      DOCUMENTS_DB_PASSWORD: ${DOCUMENTS_DB_PASSWORD}
+      CAREER_PROFILE_DB_PASSWORD: ${CAREER_PROFILE_DB_PASSWORD}
+    volumes:
+      - ./infrastructure/postgres/init/01-service-databases.sh:/opt/careerpilot/01-service-databases.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   identity-migrate:
     build:
       context: .
@@ -92,8 +117,8 @@ services:
       <<: *service-env
       DATABASE_URL: postgresql+psycopg://identity_svc:${IDENTITY_DB_PASSWORD}@postgres:5432/identity
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-provision:
+        condition: service_completed_successfully
     restart: "no"
 
   identity-service:
@@ -104,6 +129,9 @@ services:
       RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/careerpilot
       # Only this service holds the signing key (see scripts/init-env.py).
       JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?run python scripts/init-env.py --update}
+      # Each Argon2id hash uses 64 MiB. Two at a time keeps local memory peaks
+      # small on a laptop Docker VM; production uses the default of 4.
+      PASSWORD_HASH_CONCURRENCY: ${PASSWORD_HASH_CONCURRENCY:-2}
     depends_on:
       identity-migrate:
         condition: service_completed_successfully
@@ -122,6 +150,8 @@ services:
       <<: *service-env
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
       IDENTITY_SERVICE_URL: http://identity-service:8000
+      DOCUMENT_SERVICE_URL: http://document-service:8000
+      CAREER_PROFILE_SERVICE_URL: http://career-profile-service:8000
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:1420}
       RATE_LIMIT_LOGIN_PER_IP: ${RATE_LIMIT_LOGIN_PER_IP:-20}
       RATE_LIMIT_LOGIN_FAILURES_PER_ACCOUNT: ${RATE_LIMIT_LOGIN_FAILURES_PER_ACCOUNT:-5}
@@ -131,8 +161,131 @@ services:
         condition: service_healthy
       identity-service:
         condition: service_healthy
+      document-service:
+        condition: service_healthy
+      career-profile-service:
+        condition: service_healthy
     ports:
       - "127.0.0.1:${GATEWAY_HOST_PORT:-8080}:8000"
+    restart: unless-stopped
+
+  # --------------------------------------------------- documents (Phase 3)
+  documents-migrate:
+    build:
+      context: .
+      dockerfile: services/document-service/Dockerfile
+    image: careerpilot/document-service:local
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg://documents_svc:${DOCUMENTS_DB_PASSWORD}@postgres:5432/documents
+    depends_on:
+      db-provision:
+        condition: service_completed_successfully
+    restart: "no"
+
+  document-service:
+    image: careerpilot/document-service:local
+    environment: &document-env
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg://documents_svc:${DOCUMENTS_DB_PASSWORD}@postgres:5432/documents
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/careerpilot
+      IDENTITY_JWKS_URL: http://identity-service:8000/.well-known/jwks.json
+      S3_ENDPOINT_URL: http://object-storage:8333
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET_DOCUMENTS:-careerpilot-documents}
+    depends_on:
+      documents-migrate:
+        condition: service_completed_successfully
+      object-storage:
+        condition: service_healthy
+      identity-service:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8102:8000"
+    restart: unless-stopped
+
+  # Extracts text from uploads in isolated child processes; relays the outbox.
+  document-worker:
+    image: careerpilot/document-service:local
+    command: ["python", "-m", "document_service.worker"]
+    environment: *document-env
+    depends_on:
+      documents-migrate:
+        condition: service_completed_successfully
+      object-storage:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,sys,time; sys.exit(time.time() - os.path.getmtime('/tmp/document-worker.heartbeat') > 60)",
+        ]
+      interval: 15s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  # -------------------------------------------------- career profile (Phase 3)
+  career-profile-migrate:
+    build:
+      context: .
+      dockerfile: services/career-profile-service/Dockerfile
+    image: careerpilot/career-profile-service:local
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg://career_profile_svc:${CAREER_PROFILE_DB_PASSWORD}@postgres:5432/career_profile
+    depends_on:
+      db-provision:
+        condition: service_completed_successfully
+    restart: "no"
+
+  career-profile-service:
+    image: careerpilot/career-profile-service:local
+    environment: &profile-env
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg://career_profile_svc:${CAREER_PROFILE_DB_PASSWORD}@postgres:5432/career_profile
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/careerpilot
+      IDENTITY_JWKS_URL: http://identity-service:8000/.well-known/jwks.json
+    depends_on:
+      career-profile-migrate:
+        condition: service_completed_successfully
+      identity-service:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8103:8000"
+    restart: unless-stopped
+
+  # Turns extracted document text into suggested career facts.
+  career-profile-worker:
+    image: careerpilot/career-profile-service:local
+    command: ["python", "-m", "career_profile_service.worker"]
+    environment: *profile-env
+    depends_on:
+      career-profile-migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    # Heartbeat is written only while the broker connection is open.
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os,sys,time; sys.exit(time.time() - os.path.getmtime('/tmp/career-profile-worker.heartbeat') > 60)",
+        ]
+      interval: 15s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
     restart: unless-stopped
 
   # -------------------------------------------------------- observability

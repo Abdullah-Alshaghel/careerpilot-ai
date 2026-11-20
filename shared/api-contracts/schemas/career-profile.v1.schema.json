@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/career-profile.v1.schema.json",
+  "x-generated-from": "career_profile_service.schemas.ProfileOut (scripts/export-contracts.py)",
+  "$defs": {
+    "Conflict": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "multiple_values",
+            "different_dates",
+            "different_details"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "fact_type": {
+          "$ref": "#/$defs/FactType"
+        },
+        "fact_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Fact Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "fact_type",
+        "fact_ids"
+      ],
+      "title": "Conflict",
+      "type": "object"
+    },
+    "FactOut": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "fact_type": {
+          "$ref": "#/$defs/FactType"
+        },
+        "value": {
+          "additionalProperties": true,
+          "title": "Value",
+          "type": "object"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FactSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "verification_status": {
+          "$ref": "#/$defs/VerificationStatus"
+        },
+        "valid_from": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid From"
+        },
+        "valid_to": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Valid To"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "fact_type",
+        "value",
+        "source",
+        "confidence",
+        "verification_status",
+        "valid_from",
+        "valid_to",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "FactOut",
+      "type": "object"
+    },
+    "FactSource": {
+      "additionalProperties": false,
+      "properties": {
+        "document_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Document Id"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        },
+        "excerpt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Excerpt"
+        }
+      },
+      "required": [
+        "document_id",
+        "name",
+        "excerpt"
+      ],
+      "title": "FactSource",
+      "type": "object"
+    },
+    "FactType": {
+      "enum": [
+        "personal",
+        "summary",
+        "employment",
+        "education",
+        "skill",
+        "certification",
+        "language"
+      ],
+      "title": "FactType",
+      "type": "string"
+    },
+    "VerificationStatus": {
+      "enum": [
+        "extracted",
+        "user_verified",
+        "rejected"
+      ],
+      "title": "VerificationStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "integer"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "facts": {
+      "items": {
+        "$ref": "#/$defs/FactOut"
+      },
+      "title": "Facts",
+      "type": "array"
+    },
+    "conflicts": {
+      "items": {
+        "$ref": "#/$defs/Conflict"
+      },
+      "title": "Conflicts",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "updated_at",
+    "facts",
+    "conflicts"
+  ],
+  "title": "ProfileOut",
+  "type": "object"
+}

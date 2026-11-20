@@ -3,20 +3,28 @@ import { AppShell, type NavItem } from "./AppShell";
 import { AuthScreen } from "./AuthScreen";
 import { Alert, Button, Spinner } from "./components";
 import { AccountPage, SystemStatusPage } from "./pages";
+import { CareerProfilePage } from "./profile/CareerProfilePage";
 import { useAuth, useI18n } from "./providers";
 
-type Page = "status" | "account";
+type Page = "profile" | "status" | "account";
 
 const NAV: readonly NavItem<Page>[] = [
-  { id: "status", label: "nav.systemStatus" },
+  { id: "profile", label: "nav.profile" },
   { id: "account", label: "nav.account" },
+  { id: "status", label: "nav.systemStatus" },
 ];
 
+const PAGES: Record<Page, () => React.ReactNode> = {
+  profile: () => <CareerProfilePage />,
+  account: () => <AccountPage />,
+  status: () => <SystemStatusPage />,
+};
+
 function Workspace() {
-  const [page, setPage] = useState<Page>("status");
+  const [page, setPage] = useState<Page>("profile");
   return (
     <AppShell nav={NAV} current={page} onNavigate={setPage}>
-      {page === "status" ? <SystemStatusPage /> : <AccountPage />}
+      {PAGES[page]()}
     </AppShell>
   );
 }

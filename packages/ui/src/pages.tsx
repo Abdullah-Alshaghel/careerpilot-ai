@@ -26,7 +26,7 @@ export function AccountPage() {
         <h2 id="account-heading" className="cp-visually-hidden">
           {t("nav.account")}
         </h2>
-        {me.isPending ? <Spinner label={t("status.loading")} /> : null}
+        {me.isPending ? <Spinner label={t("common.loading")} /> : null}
         {me.isError ? <Alert data-testid="account-error">{t("account.loadError")}</Alert> : null}
         {me.data ? (
           <dl className="cp-details" data-testid="account-details">

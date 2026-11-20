@@ -24,8 +24,11 @@ test.describe.serial("web client against the real backend", () => {
     expect(response.status()).toBe(201);
     expect(await response.text()).not.toContain("refresh_token");
 
-    // Status page: the gateway and Identity are up.
+    // Status page: the gateway and every service are up.
+    await page.getByTestId("nav-status").click();
     await expect(page.getByTestId("health-status")).toHaveAttribute("data-state", "ok");
+    await expect(page.getByTestId("check-document-service")).toContainText("Up");
+    await expect(page.getByTestId("check-career-profile-service")).toContainText("Up");
     await expect(page.getByTestId("check-identity-service")).toContainText("Up");
 
     // Account page: GET /v1/users/me through the gateway with the access token.

@@ -23,6 +23,8 @@
     },
     "event_type": {
       "enum": [
+        "document.text_extracted",
+        "document.deleted",
         "search.started",
         "job.discovered",
         "job.analyzed",
@@ -37,12 +39,35 @@
         "notification.requested"
       ]
     },
-    "schema_version": { "type": "integer", "minimum": 1 },
-    "occurred_at": { "type": "string", "format": "date-time" },
-    "correlation_id": { "type": "string", "minLength": 8, "maxLength": 128 },
-    "aggregate_id": { "type": "string", "minLength": 1, "maxLength": 128 },
-    "user_id": { "type": ["string", "null"], "format": "uuid" },
-    "producer": { "type": "string", "minLength": 1, "maxLength": 64 },
-    "payload": { "type": "object" }
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "aggregate_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "user_id": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "payload": {
+      "type": "object"
+    }
   }
 }

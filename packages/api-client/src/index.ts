@@ -1,4 +1,9 @@
 import type {
+  CareerDocument,
+  CareerFact,
+  CareerProfile,
+  DocumentList,
+  FactType,
   HealthResponse,
   LoginRequest,
   RegisterRequest,
@@ -8,6 +13,11 @@ import type {
 import {
   apiBaseUrlSchema,
   apiErrorBodySchema,
+  bulkUpdateResultSchema,
+  careerFactSchema,
+  careerProfileSchema,
+  documentListSchema,
+  documentSchema,
   healthResponseSchema,
   tokenResponseSchema,
   userSchema,
@@ -64,6 +74,26 @@ export interface ApiClient {
   users: {
     me(signal?: AbortSignal): Promise<User>;
   };
+  documents: {
+    /** Multipart upload. Same bytes uploaded twice return the existing document. */
+    upload(file: Blob, filename: string, signal?: AbortSignal): Promise<CareerDocument>;
+    list(signal?: AbortSignal): Promise<DocumentList>;
+    get(id: string, signal?: AbortSignal): Promise<CareerDocument>;
+    remove(id: string): Promise<void>;
+  };
+  profile: {
+    get(signal?: AbortSignal): Promise<CareerProfile>;
+    addFact(factType: FactType, value: Record<string, unknown>): Promise<CareerFact>;
+    updateFact(
+      id: string,
+      change: {
+        value?: Record<string, unknown>;
+        verification_status?: "user_verified" | "rejected";
+      },
+    ): Promise<CareerFact>;
+    setStatus(ids: string[], status: "user_verified" | "rejected"): Promise<number>;
+    removeFact(id: string): Promise<void>;
+  };
 }
 
 type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
@@ -100,7 +130,9 @@ export async function sendJson<S extends z.ZodType>(
 ): Promise<z.infer<S>> {
   const correlationId = req.headers["x-correlation-id"] ?? null;
   const headers: Record<string, string> = { accept: "application/json", ...req.headers };
-  if (req.body !== undefined) headers["content-type"] = "application/json";
+  const isForm = typeof FormData !== "undefined" && req.body instanceof FormData;
+  // FormData sets its own multipart content-type (with the boundary).
+  if (req.body !== undefined && !isForm) headers["content-type"] = "application/json";
 
   const timeout = AbortSignal.timeout(req.timeoutMs);
   const signal = req.signal ? AbortSignal.any([req.signal, timeout]) : timeout;
@@ -110,7 +142,12 @@ export async function sendJson<S extends z.ZodType>(
     response = await doFetch(req.url, {
       method: req.method,
       headers,
-      body: req.body === undefined ? undefined : JSON.stringify(req.body),
+      body:
+        req.body === undefined
+          ? undefined
+          : isForm
+            ? (req.body as FormData)
+            : JSON.stringify(req.body),
       signal,
       credentials: req.credentials,
     });
@@ -174,7 +211,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     method: Method,
     path: `/${string}`,
     schema: S | null,
-    init: { body?: unknown; signal?: AbortSignal; authenticated?: boolean } = {},
+    init: {
+      body?: unknown;
+      signal?: AbortSignal;
+      authenticated?: boolean;
+      timeoutMs?: number;
+    } = {},
   ): Promise<z.infer<S>> {
     const authenticated = init.authenticated ?? true;
 
@@ -191,7 +233,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
           },
           body: init.body,
           signal: init.signal,
-          timeoutMs,
+          timeoutMs: init.timeoutMs ?? timeoutMs,
           // Cookies are not used for API auth; tokens go in the Authorization header.
           credentials: "omit",
         },
@@ -234,6 +276,46 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     },
     users: {
       me: (signal) => request("GET", "/v1/users/me", userSchema, { signal }),
+    },
+    documents: {
+      upload(file, filename, signal) {
+        const form = new FormData();
+        form.append("file", file, filename);
+        return request("POST", "/v1/documents", documentSchema, {
+          body: form,
+          signal,
+          timeoutMs: Math.max(timeoutMs, 120_000),
+        });
+      },
+      list: (signal) => request("GET", "/v1/documents", documentListSchema, { signal }),
+      get: (id, signal) =>
+        request("GET", `/v1/documents/${encodeURIComponent(id)}`, documentSchema, { signal }),
+      async remove(id) {
+        await request("DELETE", `/v1/documents/${encodeURIComponent(id)}`, null);
+      },
+    },
+    profile: {
+      get: (signal) => request("GET", "/v1/profile", careerProfileSchema, { signal }),
+      addFact: (factType, value) =>
+        request("POST", "/v1/profile/facts", careerFactSchema, {
+          body: { fact_type: factType, value },
+        }),
+      updateFact: (id, change) =>
+        request("PATCH", `/v1/profile/facts/${encodeURIComponent(id)}`, careerFactSchema, {
+          body: change,
+        }),
+      async setStatus(ids, status) {
+        const result = await request(
+          "POST",
+          "/v1/profile/facts/bulk-status",
+          bulkUpdateResultSchema,
+          { body: { fact_ids: ids, verification_status: status } },
+        );
+        return result.updated;
+      },
+      async removeFact(id) {
+        await request("DELETE", `/v1/profile/facts/${encodeURIComponent(id)}`, null);
+      },
     },
   };
 }

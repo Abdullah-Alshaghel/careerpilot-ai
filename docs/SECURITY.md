@@ -50,6 +50,31 @@
 - **Web per-IP limits behind the web server:** the web app's server calls the gateway, so browsers share its address unless the gateway trusts it via `TRUSTED_PROXY_CIDRS` (with an edge proxy setting `X-Forwarded-For`). Per-account login limits apply regardless.
 - No multi-factor authentication or password reset yet (both need the Notification Service for email).
 
+## Implemented (Phase 3: documents and career profile)
+
+| Control | Where | Verified by |
+|---|---|---|
+| Upload type detected from content (PDF magic, DOCX package structure, strict UTF-8 text); filename and client `Content-Type` ignored | `document_service/filetypes.py` | `test_files.py`, live `test_disguised_and_empty_files_are_refused`, Playwright disguised-executable step |
+| Macro-enabled Word files, zip bombs (entry count, total size, compression ratio) and path-traversal archive entries refused before storage | `filetypes.py` | `test_rejects_macro_enabled_word_documents`, `test_rejects_zip_bombs`, `test_rejects_path_traversal_entries` |
+| 10 MB cap enforced while streaming the upload (and 12 MB at the gateway); 50 documents per user | `document_service/api.py`, gateway | `test_files_over_10_mb_are_refused`, UI pre-check |
+| Untrusted files parsed in a separate process with a 30 s timeout and a 512 MB memory cap; the process is killed on overrun | `document_service/extraction.py` | `test_isolated_extraction_times_out`, `..._reports_errors_from_the_child` |
+| Files are never executed, rendered or served back; extraction errors are stored as short codes only | document service | review, tests |
+| Private bucket; object keys are `users/{user_id}/documents/{document_id}/...`, never the filename; deleting a document removes its objects | `storage.py`, `api.py` | `test_storage_keys_are_per_user_and_never_contain_the_filename`, `test_deleting_a_document_removes_the_file_...` |
+| Every document and profile route requires a verified token; every query is scoped by the token's `user_id`; another user's resource is a plain 404 | `require_user`, both services | `test_documents_and_facts_are_private_to_their_owner`, `test_users_cannot_touch_each_others_facts`, `test_every_route_requires_a_token` |
+| Each service has its own database role, refused by every other database | `infrastructure/postgres/init` | `test_service_role_cannot_access_other_databases` (parametrized over all services) |
+| CV text never logged: redacted log key, excerpts not logged; checked against real container logs | `careerpilot_common/logging.py` | `test_text_extracted_payload_uses_a_log_redacted_key`; log grep after the live suite (0 matches) |
+| CV text treated as data: pattern-matched only; nothing in it can approve a fact | `parser.py` | `test_prompt_like_text_is_just_data` |
+| Extracted suggestions are never facts until the user approves them; conflicts are shown, never auto-resolved | `career_profile_service/service.py` | `test_conflicting_names_are_reported_not_resolved`, `test_second_document_adds_only_new_facts_and_flags_conflicts` |
+| Desktop: native file-drop handling disabled; dropped files reach only the page's validated upload path | `tauri*.conf.json` | `security.rs::file_drops_go_to_the_page_not_to_native_handlers` |
+
+### Known limitations (Phase 3)
+
+- **No malware scanning yet.** Uploads are type-checked, size-capped, parsed in a sandboxed child process and never executed or served back, but there is no antivirus engine. ClamAV (or a cloud scanning API) is planned for Phase 9 hardening; it needs roughly 1 GB of RAM, which the local Docker VM does not have to spare.
+- **No OCR:** scanned, image-only PDFs fail with `no_text`.
+- The extraction memory cap uses `RLIMIT_AS` and only applies on Linux (containers); a timeout applies everywhere.
+- **CV text crosses RabbitMQ** in `document.text_extracted` (ADR-018). Production needs TLS on the broker connection and broker-level encryption at rest, or a switch to signed URLs.
+- Rule-based extraction is less accurate on unusual layouts; users correct suggestions during review (ADR-016).
+
 ## Rules for upcoming phases
 
 - **Approval gates (Phase 8)** are enforced in the Approval/Application services, never in clients. Submission requires a valid, non-revoked final approval for the *current* `package_version`; any package change invalidates it.

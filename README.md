@@ -39,7 +39,7 @@ npm run dev:web
 npm run dev:desktop
 ```
 
-Both clients open on **sign in / create account**. Once signed in they show **System status** (live connectivity to the gateway and each backend dependency) and **Account** (your details from the backend), with an English/Arabic (RTL) toggle. Desktop keeps the session in the OS keychain and Web in an HttpOnly cookie, so restarting or reloading keeps you signed in.
+Both clients open on **sign in / create account**. Once signed in, **Career profile** is the main page: upload your CV (PDF, Word or text), and review every piece of information found in it (approve, reject, edit, or add your own). Nothing counts until you approve it. **Account** and **System status** are in the sidebar, with an English/Arabic (RTL) toggle. Desktop keeps the session in the OS keychain and Web in an HttpOnly cookie, so restarting or reloading keeps you signed in.
 
 > **Windows note:** use `127.0.0.1` rather than `localhost` for command-line clients. On some machines `localhost` resolves to IPv6 `::1` first, and the connection stalls because the stack binds IPv4 loopback only. Browsers fall back automatically.
 
@@ -49,7 +49,10 @@ Both clients open on **sign in / create account**. Once signed in they show **Sy
 # Python: unit + contract tests (from a venv with requirements-dev.txt installed)
 py -3 -m venv .venv && .venv/Scripts/pip install -r requirements-dev.txt
 .venv/Scripts/python -m pytest
-.venv/Scripts/ruff check . && .venv/Scripts/ruff format --check shared services tests
+.venv/Scripts/ruff check . && .venv/Scripts/ruff format --check shared services tests scripts
+
+# API/event contracts: regenerate after changing a service's response or event models
+.venv/Scripts/python scripts/export-contracts.py
 
 # Python: integration tests against the running compose stack
 CAREERPILOT_INTEGRATION=1 .venv/Scripts/python -m pytest tests/integration
@@ -84,6 +87,8 @@ Builds are currently **unsigned**. Signing requires certificates; see [`docs/DES
 |---|---|
 | API gateway | http://127.0.0.1:8080 (`/v1/health`, `/docs`) |
 | Identity service (direct, debug only) | http://127.0.0.1:8101 |
+| Document service (direct, debug only) | http://127.0.0.1:8102 |
+| Career profile service (direct, debug only) | http://127.0.0.1:8103 |
 | PostgreSQL | 127.0.0.1:55432 |
 | RabbitMQ management | http://127.0.0.1:15672 |
 | S3 (SeaweedFS) | http://127.0.0.1:8333 |

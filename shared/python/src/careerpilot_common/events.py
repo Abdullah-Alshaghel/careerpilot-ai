@@ -15,6 +15,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 KNOWN_EVENT_TYPES = frozenset(
     {
+        "document.text_extracted",
+        "document.deleted",
         "search.started",
         "job.discovered",
         "job.analyzed",
