@@ -171,6 +171,7 @@ def test_public_health_ok():
         "document-service": "up",
         "career-profile-service": "up",
         "company-service": "up",
+        "job-discovery-service": "up",
     }
 
 

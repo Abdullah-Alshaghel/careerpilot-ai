@@ -799,3 +799,120 @@ textarea.cp-input {
   overflow-wrap: anywhere;
   font-size: 12px;
 }
+
+/* ---- Jobs --------------------------------------------------------- */
+.cp-search-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-space-2);
+  margin-block-start: var(--cp-space-3);
+}
+
+.cp-source-list,
+.cp-job-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cp-source {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cp-space-2);
+  padding-block: var(--cp-space-1);
+  font-size: 13px;
+}
+
+.cp-source-name {
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cp-import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-space-3);
+}
+
+.cp-import .cp-row > .cp-field {
+  flex: 1 1 260px;
+}
+
+.cp-import .cp-row {
+  align-items: flex-end;
+}
+
+.cp-jobs-filters {
+  gap: var(--cp-space-4);
+}
+
+.cp-jobs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--cp-space-4);
+  align-items: start;
+}
+
+.cp-jobs-layout > :only-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 960px) {
+  .cp-jobs-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cp-job-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-space-1);
+  inline-size: 100%;
+  padding: var(--cp-space-3);
+  margin-block-end: var(--cp-space-2);
+  border: 1px solid var(--cp-border);
+  border-radius: var(--cp-radius-md);
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.cp-job-row:hover,
+.cp-job-row[aria-current="true"] {
+  border-color: var(--cp-primary);
+}
+
+.cp-job-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cp-job-meta {
+  margin: 0;
+  color: var(--cp-text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.cp-job-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cp-space-3);
+}
+
+.cp-job-detail h2:focus {
+  outline: none;
+}
+
+.cp-job-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+  max-block-size: 70vh;
+  overflow-y: auto;
+  padding-inline-end: var(--cp-space-2);
+}

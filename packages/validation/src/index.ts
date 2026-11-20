@@ -8,6 +8,10 @@ import {
   type CareerFact,
   type CareerProfile,
   type Company,
+  type Job,
+  type JobList,
+  type SearchRun,
+  type SearchRunList,
   type CompanyList,
   type DocumentList,
   type FactType,
@@ -334,3 +338,66 @@ export const connectorSlugSchema = z
   .string()
   .trim()
   .regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/, "company.error.slug");
+
+// ------------------------------------------------------------ job discovery
+
+export const searchRunSchema = z
+  .object({
+    id: z.uuid(),
+    status: z.enum(["queued", "running", "completed", "failed"]),
+    jobs_found: z.int().nonnegative(),
+    jobs_new: z.int().nonnegative(),
+    created_at: isoDateTime,
+    started_at: isoDateTime.nullable(),
+    finished_at: isoDateTime.nullable(),
+    sources: z.array(
+      z
+        .object({
+          company_id: z.uuid(),
+          company_name: z.string(),
+          connector_type: z.string(),
+          status: z.enum(["pending", "succeeded", "failed"]),
+          error_code: z.string().max(64).nullable(),
+          jobs_found: z.int().nonnegative(),
+          jobs_new: z.int().nonnegative(),
+        })
+        .strict(),
+    ),
+  })
+  .strict() satisfies z.ZodType<SearchRun>;
+
+export const searchRunListSchema = z
+  .object({ runs: z.array(searchRunSchema) })
+  .strict() satisfies z.ZodType<SearchRunList>;
+
+/** Only https links from sources are ever shown as links. */
+const httpsUrl = z
+  .string()
+  .max(2048)
+  .regex(/^https:\/\//i);
+
+const jobSummaryShape = {
+  id: z.uuid(),
+  company_id: z.uuid().nullable(),
+  company_name: z.string().max(200),
+  source_type: z.string().max(32),
+  title: z.string().max(300),
+  url: httpsUrl.nullable(),
+  location: z.string().max(200).nullable(),
+  remote: z.boolean().nullable(),
+  employment_type: z.string().max(60).nullable(),
+  department: z.string().max(200).nullable(),
+  posted_at: isoDateTime.nullable(),
+  first_seen_at: isoDateTime,
+  listing_status: z.enum(["active", "no_longer_listed"]),
+  duplicate_of_id: z.uuid().nullable(),
+  is_new: z.boolean(),
+};
+
+export const jobSchema = z
+  .object({ ...jobSummaryShape, description: z.string().max(20_000) })
+  .strict() satisfies z.ZodType<Job>;
+
+export const jobListSchema = z
+  .object({ jobs: z.array(z.object(jobSummaryShape).strict()), total: z.int().nonnegative() })
+  .strict() satisfies z.ZodType<JobList>;

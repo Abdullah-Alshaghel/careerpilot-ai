@@ -19,7 +19,7 @@ ignore = ["RUF012"]
 "services/career-profile-service/tests/**" = ["S101", "RUF001"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["careerpilot_common", "api_gateway", "identity_service", "document_service", "career_profile_service", "company_service", "tests"]
+known-first-party = ["careerpilot_common", "api_gateway", "identity_service", "document_service", "career_profile_service", "company_service", "job_discovery_service", "tests"]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib -ra"

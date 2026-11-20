@@ -8,6 +8,11 @@ import type {
   ConnectorType,
   DocumentList,
   FactType,
+  Job,
+  JobFilters,
+  JobList,
+  SearchRun,
+  SearchRunList,
   HealthResponse,
   LoginRequest,
   RegisterRequest,
@@ -25,6 +30,10 @@ import {
   documentListSchema,
   documentSchema,
   healthResponseSchema,
+  jobListSchema,
+  jobSchema,
+  searchRunListSchema,
+  searchRunSchema,
   tokenResponseSchema,
   userSchema,
 } from "@careerpilot/validation";
@@ -121,6 +130,18 @@ export interface ApiClient {
       change: { config?: Record<string, string>; enabled?: boolean },
     ): Promise<Company>;
     removeConnector(companyId: string, connectorId: string): Promise<Company>;
+  };
+  searches: {
+    /** Start a search over the user's enabled job sources (202, runs in the background). */
+    start(): Promise<SearchRun>;
+    list(signal?: AbortSignal): Promise<SearchRunList>;
+    get(id: string, signal?: AbortSignal): Promise<SearchRun>;
+  };
+  jobs: {
+    list(filters?: JobFilters, signal?: AbortSignal): Promise<JobList>;
+    get(id: string, signal?: AbortSignal): Promise<Job>;
+    /** Add one job from a link (its page must publish schema.org JobPosting data). */
+    importFromUrl(url: string): Promise<Job>;
   };
 }
 
@@ -377,6 +398,30 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
           `/v1/companies/${encodeURIComponent(companyId)}/connectors/${encodeURIComponent(connectorId)}`,
           companySchema,
         ),
+    },
+    searches: {
+      start: () => request("POST", "/v1/searches", searchRunSchema),
+      list: (signal) => request("GET", "/v1/searches?limit=5", searchRunListSchema, { signal }),
+      get: (id, signal) =>
+        request("GET", `/v1/searches/${encodeURIComponent(id)}`, searchRunSchema, { signal }),
+    },
+    jobs: {
+      list(filters = {}, signal) {
+        const params = new URLSearchParams();
+        for (const [key, value] of Object.entries(filters)) {
+          if (value !== undefined && value !== "" && value !== false)
+            params.set(key, String(value));
+        }
+        const query = params.toString();
+        return request("GET", `/v1/jobs${query ? `?${query}` : ""}`, jobListSchema, { signal });
+      },
+      get: (id, signal) =>
+        request("GET", `/v1/jobs/${encodeURIComponent(id)}`, jobSchema, { signal }),
+      importFromUrl: (url) =>
+        request("POST", "/v1/jobs/import", jobSchema, {
+          body: { url },
+          timeoutMs: Math.max(timeoutMs, 60_000),
+        }),
     },
   };
 }

@@ -1,0 +1,22 @@
+{
+  "jobs": [
+    {
+      "id": "7c3f8e0a-1d2b-4c5d-9e6f-a1b2c3d4e5f6",
+      "company_id": "c1000000-0000-4000-8000-000000000001",
+      "company_name": "Acme Payments",
+      "source_type": "greenhouse",
+      "title": "Senior Backend Engineer",
+      "url": "https://job-boards.greenhouse.io/acme/jobs/4012345",
+      "location": "Riyadh, Saudi Arabia",
+      "remote": null,
+      "employment_type": null,
+      "department": "Engineering",
+      "posted_at": "2026-11-18T09:00:00Z",
+      "first_seen_at": "2026-11-20T12:00:05Z",
+      "listing_status": "active",
+      "duplicate_of_id": null,
+      "is_new": true
+    }
+  ],
+  "total": 1
+}

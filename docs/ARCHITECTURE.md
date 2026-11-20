@@ -29,7 +29,7 @@ Authoritative reference: `CareerPilot_AI_Technical_Architecture_v1.1_Desktop_Web
 | `packages/ui` | Design tokens, components, app shell, shared screens |
 | `packages/i18n` | en/ar dictionaries, RTL/LTR, formatting |
 | `packages/config` | Shared tsconfig |
-| `services/*` | FastAPI domain services (implemented: `api-gateway`, `identity-service`, `document-service`, `career-profile-service`, `company-service`); each service with background work also runs a worker process from the same image |
+| `services/*` | FastAPI domain services (implemented: `api-gateway`, `identity-service`, `document-service`, `career-profile-service`, `company-service`, `job-discovery-service`); each service with background work also runs a worker process from the same image |
 | `apps/web/src/server` | Web server-only code: session endpoints that hold the refresh-token cookie (ADR-014) |
 | `agents/*` | LangGraph agents (Phase 5+) |
 | `shared/python` | `careerpilot_common`: config, JSON logging + redaction, correlation IDs, health, errors, event envelope, access-token verification (`require_user`), messaging (outbox, relay, consumers). **No domain models.** |
@@ -91,3 +91,14 @@ Each records a reversible default chosen where the brief left a gap.
 **ADR-022 — Optimistic concurrency for user-edited records.** The same person can edit a company from Desktop and Web at once. Each company has a `version`; clients send the version they edited, and a stale one gets `409 version_conflict` instead of silently overwriting. Clients refetch and ask the user to reapply. (Connector toggles are small, idempotent and unversioned.)
 
 **ADR-023 — External links open outside the app.** Web opens https links in a new tab with `noopener,noreferrer`; Desktop uses the official opener plugin with a capability scoped to `https://*`, so the webview can't launch local files, custom URI schemes or plain http, and never renders third-party pages itself. Both go through one shared `useOpenExternal` hook that also refuses non-https links.
+
+**ADR-024 — Outbound requests are checked at connect time.** The Job Discovery Service is the only component that reaches the internet, and only through `SafeFetcher`. A custom httpcore network backend resolves each host itself and connects only to public unicast addresses, so a URL validated earlier can't be re-pointed at an internal service by DNS rebinding, and redirects get the same check on every hop. Completes ADR-021. The real container refuses `localhost`, the metadata IP and internal Docker names (live tests).
+
+**ADR-025 — The search worker runs in the service process by default.** On small machines one container instead of two matters (see the memory notes in IMPLEMENTATION_STATUS). Runs are claimed with `SKIP LOCKED`, so replicas or a separate worker (`RUN_WORKER=false` plus `python -m job_discovery_service.worker`) are safe without code changes.
+
+**ADR-026 — Reading another service's data with the caller's token.** To start a search, Job Discovery reads the user's companies from the Company Service's API, forwarding the caller's own bearer token. The Company Service applies its normal ownership checks; there are no service credentials and no shared tables. The sources are snapshotted on the run, so the worker never needs the token.
+
+**ADR-027 — Third-party job content is plain text.** Descriptions are converted from HTML to text at ingestion and the UI renders them as text only. This removes stored-XSS from job boards entirely, and keeps job text clearly data (it will reach LLMs in Phase 6 as delimited, untrusted input).
+
+**ADR-028 — Clients compare server timestamps, never their own clock.** Deciding whether to keep polling the career profile now compares the document's and the profile's server timestamps. The Phase 3 version compared a server timestamp with the device clock, which broke when the clock was off (found when a fixture time passed).
+

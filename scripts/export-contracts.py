@@ -24,6 +24,7 @@ def generated() -> dict[Path, dict]:
     from career_profile_service.schemas import ProfileOut
     from company_service.schemas import CompanyList, CompanyOut
     from document_service.schemas import DocumentDeletedV1, DocumentList, DocumentOut, DocumentTextExtractedV1
+    from job_discovery_service.schemas import JobDiscoveredV1, JobList, JobOut, SearchRunList, SearchRunOut
 
     targets = {
         API / "document.v1.schema.json": (DocumentOut, "api/document.v1.schema.json"),
@@ -31,6 +32,11 @@ def generated() -> dict[Path, dict]:
         API / "career-profile.v1.schema.json": (ProfileOut, "api/career-profile.v1.schema.json"),
         API / "company.v1.schema.json": (CompanyOut, "api/company.v1.schema.json"),
         API / "company-list.v1.schema.json": (CompanyList, "api/company-list.v1.schema.json"),
+        API / "search-run.v1.schema.json": (SearchRunOut, "api/search-run.v1.schema.json"),
+        API / "search-run-list.v1.schema.json": (SearchRunList, "api/search-run-list.v1.schema.json"),
+        API / "job.v1.schema.json": (JobOut, "api/job.v1.schema.json"),
+        API / "job-list.v1.schema.json": (JobList, "api/job-list.v1.schema.json"),
+        EVENTS / "job.discovered.v1.schema.json": (JobDiscoveredV1, "events/payloads/job.discovered.v1.schema.json"),
         EVENTS / "document.text_extracted.v1.schema.json": (
             DocumentTextExtractedV1,
             "events/payloads/document.text_extracted.v1.schema.json",

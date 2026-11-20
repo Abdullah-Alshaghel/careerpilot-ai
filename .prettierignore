@@ -16,4 +16,8 @@ shared/api-contracts/schemas/document-list.v1.schema.json
 shared/api-contracts/schemas/career-profile.v1.schema.json
 shared/api-contracts/schemas/company.v1.schema.json
 shared/api-contracts/schemas/company-list.v1.schema.json
+shared/api-contracts/schemas/search-run.v1.schema.json
+shared/api-contracts/schemas/search-run-list.v1.schema.json
+shared/api-contracts/schemas/job.v1.schema.json
+shared/api-contracts/schemas/job-list.v1.schema.json
 shared/event-schemas/payloads/

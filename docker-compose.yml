@@ -22,6 +22,7 @@ services:
       DOCUMENTS_DB_PASSWORD: ${DOCUMENTS_DB_PASSWORD:?run python scripts/init-env.py --update}
       CAREER_PROFILE_DB_PASSWORD: ${CAREER_PROFILE_DB_PASSWORD:?run python scripts/init-env.py --update}
       COMPANIES_DB_PASSWORD: ${COMPANIES_DB_PASSWORD:?run python scripts/init-env.py --update}
+      JOBS_DB_PASSWORD: ${JOBS_DB_PASSWORD:?run python scripts/init-env.py --update}
     volumes:
       - postgres-data:/var/lib/postgresql
       - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -102,6 +103,7 @@ services:
       DOCUMENTS_DB_PASSWORD: ${DOCUMENTS_DB_PASSWORD}
       CAREER_PROFILE_DB_PASSWORD: ${CAREER_PROFILE_DB_PASSWORD}
       COMPANIES_DB_PASSWORD: ${COMPANIES_DB_PASSWORD}
+      JOBS_DB_PASSWORD: ${JOBS_DB_PASSWORD}
     volumes:
       - ./infrastructure/postgres/init/01-service-databases.sh:/opt/careerpilot/01-service-databases.sh:ro
     depends_on:
@@ -155,6 +157,7 @@ services:
       DOCUMENT_SERVICE_URL: http://document-service:8000
       CAREER_PROFILE_SERVICE_URL: http://career-profile-service:8000
       COMPANY_SERVICE_URL: http://company-service:8000
+      JOB_DISCOVERY_SERVICE_URL: http://job-discovery-service:8000
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:1420}
       RATE_LIMIT_LOGIN_PER_IP: ${RATE_LIMIT_LOGIN_PER_IP:-20}
       RATE_LIMIT_LOGIN_FAILURES_PER_ACCOUNT: ${RATE_LIMIT_LOGIN_FAILURES_PER_ACCOUNT:-5}
@@ -169,6 +172,8 @@ services:
       career-profile-service:
         condition: service_healthy
       company-service:
+        condition: service_healthy
+      job-discovery-service:
         condition: service_healthy
     ports:
       - "127.0.0.1:${GATEWAY_HOST_PORT:-8080}:8000"
@@ -321,6 +326,44 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8104:8000"
+    restart: unless-stopped
+
+  # ------------------------------------------------ job discovery (Phase 5)
+  job-discovery-migrate:
+    build:
+      context: .
+      dockerfile: services/job-discovery-service/Dockerfile
+    image: careerpilot/job-discovery-service:local
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg://jobs_svc:${JOBS_DB_PASSWORD}@postgres:5432/jobs
+    depends_on:
+      db-provision:
+        condition: service_completed_successfully
+    restart: "no"
+
+  # API plus the in-process search worker. The only service that reaches the
+  # internet; its fetcher refuses private and internal addresses.
+  job-discovery-service:
+    image: careerpilot/job-discovery-service:local
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgresql+psycopg://jobs_svc:${JOBS_DB_PASSWORD}@postgres:5432/jobs
+      RABBITMQ_URL: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/careerpilot
+      IDENTITY_JWKS_URL: http://identity-service:8000/.well-known/jwks.json
+      COMPANY_SERVICE_URL: http://company-service:8000
+    depends_on:
+      job-discovery-migrate:
+        condition: service_completed_successfully
+      identity-service:
+        condition: service_healthy
+      company-service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8105:8000"
     restart: unless-stopped
 
   # -------------------------------------------------------- observability

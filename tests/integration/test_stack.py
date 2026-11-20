@@ -31,6 +31,7 @@ def test_gateway_reports_all_dependencies_up():
         "document-service",
         "career-profile-service",
         "company-service",
+        "job-discovery-service",
     }
 
 

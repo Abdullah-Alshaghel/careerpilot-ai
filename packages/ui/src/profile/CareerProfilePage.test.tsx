@@ -49,11 +49,12 @@ function backend() {
     facts: [] as ReturnType<typeof fact>[],
     conflicts: [] as unknown[],
     requests: [] as { key: string; body: unknown }[],
+    profileUpdatedAt: now,
   };
   const profile = () => ({
     id: "b2000000-0000-4000-8000-000000000001",
     version: 1,
-    updated_at: now,
+    updated_at: state.profileUpdatedAt,
     facts: state.facts,
     conflicts: state.conflicts,
   });
@@ -155,9 +156,11 @@ describe("career profile: documents", () => {
     expect(screen.getByTestId("review-empty")).toHaveTextContent("Reading your document");
 
     // The worker finishes and the profile service adds suggestions.
-    // The worker finishes and the profile service adds suggestions.
+    // The worker finishes, then the profile service processes the document.
     b.state.documents[0]!.status = "extracted";
+    b.state.documents[0]!.updated_at = "2026-11-20T09:00:05Z";
     b.state.facts.push(fact("skill", { name: "Python" }));
+    b.state.profileUpdatedAt = "2026-11-20T09:00:06Z";
     await waitFor(() => expect(screen.getByTestId("document-status")).toHaveTextContent("Read"), {
       timeout: 5_000,
     });

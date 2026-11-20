@@ -51,11 +51,14 @@ test.describe.serial("web client against the real backend", () => {
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("wrong password!!");
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByTestId("auth-error")).toHaveText("Email or password is incorrect");
+    // Argon2id verification is deliberately slow, more so on a busy machine.
+    await expect(page.getByTestId("auth-error")).toHaveText("Email or password is incorrect", {
+      timeout: 20_000,
+    });
 
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByTestId("signed-in-user")).toContainText(email);
+    await expect(page.getByTestId("signed-in-user")).toContainText(email, { timeout: 20_000 });
 
     // Reload: the session resumes from the cookie (refresh through the real BFF).
     await page.reload();

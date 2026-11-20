@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/events/payloads/job.discovered.v1.schema.json",
+  "x-generated-from": "job_discovery_service.schemas.JobDiscoveredV1 (scripts/export-contracts.py)",
+  "additionalProperties": false,
+  "description": "Payload of ``job.discovered`` v1 (consumed by Job Analysis, Phase 6).\nJob text is public but untrusted: consumers treat it as data, never as instructions.",
+  "properties": {
+    "job_id": {
+      "format": "uuid",
+      "title": "Job Id",
+      "type": "string"
+    },
+    "company_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Company Id"
+    },
+    "company_name": {
+      "maxLength": 200,
+      "title": "Company Name",
+      "type": "string"
+    },
+    "title": {
+      "maxLength": 300,
+      "title": "Title",
+      "type": "string"
+    },
+    "url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Url"
+    },
+    "location": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Location"
+    },
+    "remote": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Remote"
+    },
+    "source_type": {
+      "maxLength": 32,
+      "title": "Source Type",
+      "type": "string"
+    },
+    "description": {
+      "maxLength": 20000,
+      "title": "Description",
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "company_id",
+    "company_name",
+    "title",
+    "url",
+    "location",
+    "remote",
+    "source_type",
+    "description"
+  ],
+  "title": "JobDiscoveredV1",
+  "type": "object"
+}

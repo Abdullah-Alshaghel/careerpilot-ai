@@ -1,15 +1,49 @@
 # Implementation status
 
-_Last updated: 2026-11-20 (end of Phase 4)_
+_Last updated: 2026-11-20 (end of Phase 5)_
 
 | Phase | Status |
 |---|---|
 | 1 — Foundation | ✅ Done |
 | 2 — Identity | ✅ Done |
 | 3 — Career Intelligence (CV upload, extraction, review) | ✅ Done |
-| 4 — Company Workspace | ✅ **Done**: acceptance criteria met (see below) |
-| 5 — Job Discovery | ⏳ Next |
-| 6–10 | Not started |
+| 4 — Company Workspace | ✅ Done |
+| 5 — Job Discovery | ✅ **Done**: acceptance criteria met (see below) |
+| 6 — Analysis & Matching | ⏳ Next |
+| 7–10 | Not started |
+
+Phases 3–5 are complete but **not yet committed** (awaiting the owner's go-ahead).
+
+## Phase 5 acceptance: "Jobs with documented sources and links"
+
+| Check | Evidence (executed 2026-11-20) |
+|---|---|
+| Real sources work | One-off manual checks against real public boards through the SSRF-safe fetcher: Greenhouse, Lever (demo board) and Ashby connectors returned titles, locations, links, dates and plain-text descriptions. Through the running stack: a company's detected Lever board → search → the container's worker fetched 10 real jobs, listed with source links and "new" flags; an immediate second search got `429 search_too_soon` |
+| Normalization and links | Connector fixture tests per vendor; careers pages via schema.org `JobPosting`; only https links kept |
+| Deduplication (#6) | Same source + external id → updated, never duplicated; same posting on two sources → linked as duplicate, hidden, announced once (integration, real Postgres) |
+| Discovery (#5) | Search lifecycle, partial failures with per-source reasons, "no longer listed" tracking, `job.discovered` outbox events (integration) |
+| SSRF | The real container refuses `localhost`, `169.254.169.254`, `company-service`, `postgres` (live); a browser import of the metadata IP is refused (Playwright) |
+| Isolation (#15) | Another user sees no runs or jobs; 404 on every id |
+| **Web** | Jobs screen: search, per-source status, filters, plain-text detail, open posting in a new tab, link import (UI tests + Playwright mocked/live) |
+| **Desktop** | Same shared screen; postings open in the system browser via the https-scoped opener. No desktop-native changes in this phase; release installer not rebuilt (memory) |
+
+## Test results after Phase 5 (actually executed)
+
+| Suite | Result |
+|---|---|
+| Python unit + contract | 322 passed |
+| Python integration (`CAREERPILOT_INTEGRATION=1`) | 95 passed (5 domain services) |
+| TypeScript unit (Vitest) | 197 passed: api-client 42, ui 55, validation 51, web 17, i18n 4, desktop 3 (UI suite 3 consecutive clean runs) |
+| Web E2E (Playwright, 2 projects) | 32 passed, twice back to back |
+| Desktop Rust | 9 passed (unchanged) |
+| Lint/format/types/contracts/secret scan | all clean |
+
+## Bugs found and fixed during Phase 5
+
+- **Profile polling depended on the device clock** (Phase 3 code): suggestions would not appear for users whose clock was off by over a minute, and a UI test began failing once its fixture time passed. Now compares server timestamps only (ADR-028).
+- **Misleading reason for blocked addresses:** a blocked robots.txt request was reported as "disallowed by robots.txt"; now reported as the safety block it is.
+- Description cleanup removed zero-width joiners that Arabic/Persian rely on; now only control characters and bidi overrides are removed. List items had blank lines between them; fixed.
+- E2E sign-in waits raised to 20 s: Argon2 verification took up to 6.7 s while both browser projects and six services ran on this machine.
 
 ## Phase 4 acceptance: "Full CRUD for companies"
 
@@ -73,7 +107,8 @@ _Last updated: 2026-11-20 (end of Phase 4)_
 | 2 | CV upload | ✅ type/size/macro/zip-bomb checks, dedupe, per-user storage keys |
 | 3 | Extraction | ✅ PDF/DOCX/TXT, Arabic, isolated child process with timeout, failure reasons |
 | 4 | Verification | ✅ facts start `extracted`; approve/reject/edit/add; conflicts shown, never auto-resolved; decisions persist |
-| 5–6 | Discovery, duplicate detection | Phase 5 |
+| 5 | Discovery | ✅ search runs over Greenhouse/Lever/Ashby/careers pages, per-source results, link import (`test_discovery.py`, live, Playwright) |
+| 6 | Duplicate detection | ✅ upsert on (source, external id); cross-source duplicates linked and announced once |
 | 7–8 | Analysis, match score | Phase 6 |
 | 9–10 | CV / cover-letter generation | Phase 7 |
 | 11–14 | Job approval, final approval, submission blocking, approval invalidation | Phase 8 |
@@ -107,9 +142,9 @@ Design decisions: ADR-016 to ADR-020 in `ARCHITECTURE.md`.
 - Unsigned desktop builds; production API host placeholder; Redis licensing note (unchanged from earlier phases).
 - `/v1/health` fans out to every service on each call; add a short result cache before production.
 
-## Next implementation step (Phase 5: Job Discovery)
+## Next implementation step (Phase 6: Analysis & Matching)
 
-1. `job-discovery-service`: search runs started manually by the user (`search.started`), connectors for the public Greenhouse, Lever and Ashby job-board APIs and careers pages, normalization into `jobs` with source links, deduplication on `(source, external_id)` plus a description hash.
-2. A safe fetcher: resolve each host and refuse private, loopback and link-local addresses on every request and redirect (ADR-021); timeouts, size caps, per-source rate limits, robots/terms review per connector.
-3. Events `job.discovered`, consumer idempotency; Job Discovery screen (list, filters, source links), English and Arabic.
-4. Tests: critical tests #5 and #6, connector fixtures (no live third-party calls in CI), isolation, E2E.
+1. `job-analysis-service` consuming `job.discovered`: requirement extraction (skills, experience, location, hard constraints vs preferences) with job text passed to any LLM as delimited, untrusted data.
+2. `matching-service`: explainable fit score per job against the **verified** career profile only (`Fit = Σ component × weight`), gaps, hard-constraint exclusions.
+3. LangGraph agents per the architecture (typed inputs/outputs, run ids, cost/time limits), with a provider decision to make (local rules vs an LLM API, as in Phase 3).
+4. Job detail shows the score breakdown; tests for #7 and #8.

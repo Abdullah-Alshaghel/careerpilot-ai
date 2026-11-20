@@ -283,3 +283,79 @@ export interface CompanyInput {
   priority: CompanyPriority;
   notes: string | null;
 }
+
+// ----------------------------------------------------------- job discovery
+
+export type SearchRunStatus = "queued" | "running" | "completed" | "failed";
+export type SearchSourceStatus = "pending" | "succeeded" | "failed";
+
+export interface SearchRunSource {
+  company_id: string;
+  company_name: string;
+  connector_type: string;
+  status: SearchSourceStatus;
+  /** not_found, timeout, unreachable, blocked_address, disallowed_by_robots, ... */
+  error_code: string | null;
+  jobs_found: number;
+  jobs_new: number;
+}
+
+/** search-run.v1 */
+export interface SearchRun {
+  id: string;
+  status: SearchRunStatus;
+  jobs_found: number;
+  jobs_new: number;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  sources: SearchRunSource[];
+}
+
+export interface SearchRunList {
+  runs: SearchRun[];
+}
+
+export type ListingStatus = "active" | "no_longer_listed";
+
+/** A job in a list (job-list.v1). */
+export interface JobSummary {
+  id: string;
+  company_id: string | null;
+  company_name: string;
+  /** greenhouse | lever | ashby | careers_page | manual */
+  source_type: string;
+  title: string;
+  /** Link to the original posting (https). */
+  url: string | null;
+  location: string | null;
+  remote: boolean | null;
+  employment_type: string | null;
+  department: string | null;
+  posted_at: string | null;
+  first_seen_at: string;
+  listing_status: ListingStatus;
+  duplicate_of_id: string | null;
+  /** First found by the most recent completed search. */
+  is_new: boolean;
+}
+
+/** job.v1: description is plain text (never HTML). */
+export interface Job extends JobSummary {
+  description: string;
+}
+
+export interface JobList {
+  jobs: JobSummary[];
+  total: number;
+}
+
+export interface JobFilters {
+  q?: string;
+  company_id?: string;
+  remote_only?: boolean;
+  include_unlisted?: boolean;
+  include_duplicates?: boolean;
+  limit?: number;
+  offset?: number;
+}

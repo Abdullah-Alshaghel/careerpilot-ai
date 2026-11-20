@@ -11,16 +11,17 @@ Envelope: `shared/event-schemas/envelope.v1.schema.json` (Python model: `careerp
 | `aggregate_id`, `user_id` | Entity and owner; consumers act only for that owner |
 | `producer` | Emitting service |
 
-## Implemented (Phase 3)
+## Implemented (Phases 3 and 5)
 
 | Event | Producer | Consumers | Payload |
 |---|---|---|---|
 | `document.text_extracted.v1` | document-service (worker) | career-profile worker | `document_id`, `filename`, `mime_type`, `parser_version`, `document_text` (≤ 200 000 chars), `truncated` |
 | `document.deleted.v1` | document-service (API) | career-profile worker | `document_id` |
+| `job.discovered.v1` | job-discovery-service (worker) | none yet (Job Analysis, Phase 6) | `job_id`, `company_id`, `company_name`, `title`, `url`, `location`, `remote`, `source_type`, `description` (plain text, ≤ 20 000 chars); not emitted for cross-source duplicates |
 
 `document_text` carries CV content across the internal broker (ADR-018). It is never logged: `document_text` is a redacted log key, tested in `tests/contract`.
 
-Registered for later phases: `search.started`, `job.discovered`, `job.analyzed`, `job.matched`, `approval.requested`, `job.approved`, `job.rejected`, `application.package.generated`, `application.approved`, `application.submitted`, `application.status_changed`, `notification.requested`.
+Registered for later phases: `search.started`, `job.analyzed`, `job.matched`, `approval.requested`, `job.approved`, `job.rejected`, `application.package.generated`, `application.approved`, `application.submitted`, `application.status_changed`, `notification.requested`.
 
 ## Topology (`careerpilot_common.messaging`)
 

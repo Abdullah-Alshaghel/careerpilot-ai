@@ -4,14 +4,16 @@ import { AuthScreen } from "./AuthScreen";
 import { Alert, Button, Spinner } from "./components";
 import { AccountPage, SystemStatusPage } from "./pages";
 import { CompaniesPage } from "./companies/CompaniesPage";
+import { JobsPage } from "./jobs/JobsPage";
 import { CareerProfilePage } from "./profile/CareerProfilePage";
 import { useAuth, useI18n } from "./providers";
 
-type Page = "profile" | "companies" | "status" | "account";
+type Page = "profile" | "companies" | "jobs" | "status" | "account";
 
 const NAV: readonly NavItem<Page>[] = [
   { id: "profile", label: "nav.profile" },
   { id: "companies", label: "nav.companies" },
+  { id: "jobs", label: "nav.jobs" },
   { id: "account", label: "nav.account" },
   { id: "status", label: "nav.systemStatus" },
 ];
@@ -19,6 +21,7 @@ const NAV: readonly NavItem<Page>[] = [
 const PAGES: Record<Page, () => React.ReactNode> = {
   profile: () => <CareerProfilePage />,
   companies: () => <CompaniesPage />,
+  jobs: () => <JobsPage />,
   account: () => <AccountPage />,
   status: () => <SystemStatusPage />,
 };

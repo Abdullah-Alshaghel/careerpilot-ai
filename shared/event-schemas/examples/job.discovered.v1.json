@@ -2,10 +2,20 @@
   "event_id": "0f8f6a52-5d0b-4b8e-9a51-0b6f3b5a2c11",
   "event_type": "job.discovered",
   "schema_version": 1,
-  "occurred_at": "2026-11-18T12:00:00Z",
+  "occurred_at": "2026-11-20T12:00:05Z",
   "correlation_id": "6a1c1a7e-3c2b-4b5e-8f4f-2f0c9f1e7d10",
   "aggregate_id": "7c3f8e0a-1d2b-4c5d-9e6f-a1b2c3d4e5f6",
   "user_id": "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
   "producer": "job-discovery-service",
-  "payload": { "source": "greenhouse", "external_id": "4012345" }
+  "payload": {
+    "job_id": "7c3f8e0a-1d2b-4c5d-9e6f-a1b2c3d4e5f6",
+    "company_id": "c1000000-0000-4000-8000-000000000001",
+    "company_name": "Acme Payments",
+    "title": "Senior Backend Engineer",
+    "url": "https://job-boards.greenhouse.io/acme/jobs/4012345",
+    "location": "Riyadh, Saudi Arabia",
+    "remote": null,
+    "source_type": "greenhouse",
+    "description": "Build payment APIs in Python."
+  }
 }

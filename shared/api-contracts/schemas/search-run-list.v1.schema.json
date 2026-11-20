@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/search-run-list.v1.schema.json",
+  "x-generated-from": "job_discovery_service.schemas.SearchRunList (scripts/export-contracts.py)",
+  "$defs": {
+    "RunStatus": {
+      "enum": [
+        "queued",
+        "running",
+        "completed",
+        "failed"
+      ],
+      "title": "RunStatus",
+      "type": "string"
+    },
+    "SearchRunOut": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/RunStatus"
+        },
+        "jobs_found": {
+          "title": "Jobs Found",
+          "type": "integer"
+        },
+        "jobs_new": {
+          "title": "Jobs New",
+          "type": "integer"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Started At"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Finished At"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/SearchRunSourceOut"
+          },
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "jobs_found",
+        "jobs_new",
+        "created_at",
+        "started_at",
+        "finished_at",
+        "sources"
+      ],
+      "title": "SearchRunOut",
+      "type": "object"
+    },
+    "SearchRunSourceOut": {
+      "additionalProperties": false,
+      "properties": {
+        "company_id": {
+          "format": "uuid",
+          "title": "Company Id",
+          "type": "string"
+        },
+        "company_name": {
+          "title": "Company Name",
+          "type": "string"
+        },
+        "connector_type": {
+          "title": "Connector Type",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/SourceStatus"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Error Code"
+        },
+        "jobs_found": {
+          "title": "Jobs Found",
+          "type": "integer"
+        },
+        "jobs_new": {
+          "title": "Jobs New",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "company_id",
+        "company_name",
+        "connector_type",
+        "status",
+        "error_code",
+        "jobs_found",
+        "jobs_new"
+      ],
+      "title": "SearchRunSourceOut",
+      "type": "object"
+    },
+    "SourceStatus": {
+      "enum": [
+        "pending",
+        "succeeded",
+        "failed"
+      ],
+      "title": "SourceStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "runs": {
+      "items": {
+        "$ref": "#/$defs/SearchRunOut"
+      },
+      "title": "Runs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "runs"
+  ],
+  "title": "SearchRunList",
+  "type": "object"
+}

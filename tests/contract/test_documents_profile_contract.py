@@ -22,6 +22,7 @@ from career_profile_service.worker import DocumentTextExtractedV1 as ConsumerExt
 from careerpilot_common.events import EventEnvelope
 from company_service.schemas import CompanyList, CompanyOut
 from document_service.schemas import DocumentDeletedV1, DocumentList, DocumentOut, DocumentTextExtractedV1
+from job_discovery_service.schemas import JobDiscoveredV1, JobList, JobOut, SearchRunList, SearchRunOut
 
 ROOT = Path(__file__).resolve().parents[2]
 API = ROOT / "shared" / "api-contracts"
@@ -51,6 +52,10 @@ def test_generated_schemas_are_up_to_date():
         ("career-profile.json", "career-profile.v1.schema.json", ProfileOut),
         ("company.json", "company.v1.schema.json", CompanyOut),
         ("company-list.json", "company-list.v1.schema.json", CompanyList),
+        ("search-run.json", "search-run.v1.schema.json", SearchRunOut),
+        ("search-run-list.json", "search-run-list.v1.schema.json", SearchRunList),
+        ("job.json", "job.v1.schema.json", JobOut),
+        ("job-list.json", "job-list.v1.schema.json", JobList),
     ],
 )
 def test_api_examples_match_schema_and_model(example, schema, model):
@@ -90,3 +95,11 @@ def test_text_extracted_payload_uses_a_log_redacted_key():
 
     payload = load(EVENTS / "examples" / "document.text_extracted.v1.json")["payload"]
     assert redact_value("payload", payload)["document_text"] == REDACTED
+
+
+def test_job_discovered_example_matches_envelope_and_payload():
+    event = load(EVENTS / "examples" / "job.discovered.v1.json")
+    validate(event, EVENTS / "envelope.v1.schema.json")
+    assert EventEnvelope.model_validate(event).routing_key == "job.discovered.v1"
+    validate(event["payload"], EVENTS / "payloads" / "job.discovered.v1.schema.json")
+    assert JobDiscoveredV1.model_validate(event["payload"]).model_dump(mode="json") == event["payload"]

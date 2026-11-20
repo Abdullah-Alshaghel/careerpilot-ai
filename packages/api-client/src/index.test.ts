@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError, createApiClient, type FetchLike } from "./index";
-import { profileMayChange } from "./react";
+import { pendingProfileChange } from "./react";
 
 const user = {
   id: "6f1c2b9e-3d4a-4b8e-9a7c-2e5d1f0a9b31",
@@ -294,9 +294,8 @@ describe("documents and profile", () => {
   });
 });
 
-describe("profileMayChange", () => {
-  const now = Date.parse("2026-11-20T09:00:30Z");
-  const document = (status: string, updated = "2026-11-20T09:00:00Z") => ({
+describe("pendingProfileChange", () => {
+  const document = (status: string, updated: string) => ({
     id: "d1",
     filename: "cv.pdf",
     mime_type: "application/pdf" as const,
@@ -306,30 +305,30 @@ describe("profileMayChange", () => {
     created_at: updated,
     updated_at: updated,
   });
-  const profile = (documentIds: string[]) => ({
-    id: "p",
-    version: 1,
-    updated_at: "2026-11-20T09:00:00Z",
-    conflicts: [],
-    facts: documentIds.map((id) => ({ source: { document_id: id } })),
-  });
+  const profile = (updated: string) =>
+    ({ id: "p", version: 2, updated_at: updated, conflicts: [], facts: [] }) as never;
 
-  it("polls while documents are read and until their suggestions arrive", () => {
-    expect(profileMayChange({ documents: [document("processing")] }, undefined, now)).toBe(true);
-    expect(
-      profileMayChange({ documents: [document("extracted")] }, profile([]) as never, now),
-    ).toBe(true);
-    expect(
-      profileMayChange({ documents: [document("extracted")] }, profile(["d1"]) as never, now),
-    ).toBe(false);
-  });
-
-  it("stops after the settle window even if a CV yielded nothing", () => {
-    const old = document("extracted", "2026-11-20T08:00:00Z");
-    expect(profileMayChange({ documents: [old] }, profile([]) as never, now)).toBe(false);
-    expect(profileMayChange({ documents: [document("failed")] }, profile([]) as never, now)).toBe(
-      false,
+  it("reports reading, then awaiting until the profile catches up", () => {
+    const docs = (status: string) => ({ documents: [document(status, "2026-11-20T09:00:05Z")] });
+    expect(pendingProfileChange(docs("processing"), undefined)).toBe("reading");
+    expect(pendingProfileChange(docs("extracted"), profile("2026-11-20T09:00:00Z"))).toBe(
+      "awaiting",
     );
+    expect(pendingProfileChange(docs("extracted"), profile("2026-11-20T09:00:06Z"))).toBeNull();
+  });
+
+  it("never depends on this device's clock", () => {
+    // Timestamps far in the past or future relative to Date.now() change nothing.
+    const old = { documents: [document("extracted", "2001-01-01T00:00:05Z")] };
+    expect(pendingProfileChange(old, profile("2001-01-01T00:00:00Z"))).toBe("awaiting");
+    const future = { documents: [document("extracted", "2099-01-01T00:00:00Z")] };
+    expect(pendingProfileChange(future, profile("2099-01-01T00:00:01Z"))).toBeNull();
+    expect(
+      pendingProfileChange(
+        { documents: [document("failed", "2099-01-01T00:00:00Z")] },
+        profile("2001-01-01T00:00:00Z"),
+      ),
+    ).toBeNull();
   });
 });
 
@@ -382,6 +381,39 @@ describe("companies", () => {
     const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
     await expect(client.companies.get(company.id)).rejects.toMatchObject({
       kind: "invalid_response",
+    });
+  });
+});
+
+describe("job discovery", () => {
+  it("encodes only the filters that are set", async () => {
+    const fetch = vi.fn<FetchLike>(async () => jsonResponse({ jobs: [], total: 0 }));
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await client.jobs.list({
+      q: "data & ml",
+      remote_only: true,
+      include_unlisted: false,
+      company_id: undefined,
+    });
+    expect(fetch.mock.calls[0]![0]).toBe(
+      "http://localhost:8080/v1/jobs?q=data+%26+ml&remote_only=true",
+    );
+    await client.jobs.list();
+    expect(fetch.mock.calls[1]![0]).toBe("http://localhost:8080/v1/jobs");
+  });
+
+  it("explains a search started too soon", async () => {
+    const fetch = vi.fn<FetchLike>(async () =>
+      jsonResponse(
+        { error: { code: "search_too_soon", message: "Wait", correlation_id: null } },
+        429,
+        { "retry-after": "42" },
+      ),
+    );
+    const client = createApiClient({ baseUrl: "http://localhost:8080", fetch, clientType: "web" });
+    await expect(client.searches.start()).rejects.toMatchObject({
+      code: "search_too_soon",
+      retryAfter: 42,
     });
   });
 });

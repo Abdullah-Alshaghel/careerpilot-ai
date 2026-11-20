@@ -21,6 +21,7 @@ class GatewaySettings(ServiceSettings):
     document_service_url: str = "http://127.0.0.1:8102"
     career_profile_service_url: str = "http://127.0.0.1:8103"
     company_service_url: str = "http://127.0.0.1:8104"
+    job_discovery_service_url: str = "http://127.0.0.1:8105"
     upstream_timeout_seconds: float = Field(default=15.0, gt=0, le=120)
     # File uploads (up to 10 MB, possibly from slow connections) get longer.
     upload_timeout_seconds: float = Field(default=60.0, gt=0, le=300)
@@ -78,11 +79,17 @@ class GatewaySettings(ServiceSettings):
             "/v1/documents": self.document_service_url,
             "/v1/profile": self.career_profile_service_url,
             "/v1/companies": self.company_service_url,
+            "/v1/searches": self.job_discovery_service_url,
+            "/v1/jobs": self.job_discovery_service_url,
         }
 
     def route_timeouts(self) -> dict[tuple[str, str], float]:
         """Per-route upstream timeouts (method, exact path); others use the default."""
-        return {("POST", "/v1/documents"): self.upload_timeout_seconds}
+        return {
+            ("POST", "/v1/documents"): self.upload_timeout_seconds,
+            # Fetches a third-party page (robots.txt + the page, with pacing).
+            ("POST", "/v1/jobs/import"): self.upload_timeout_seconds,
+        }
 
     def jwks_url(self) -> str:
         return self.identity_service_url.rstrip("/") + "/.well-known/jwks.json"
@@ -110,4 +117,5 @@ class GatewaySettings(ServiceSettings):
             "document-service": self.document_service_url,
             "career-profile-service": self.career_profile_service_url,
             "company-service": self.company_service_url,
+            "job-discovery-service": self.job_discovery_service_url,
         }

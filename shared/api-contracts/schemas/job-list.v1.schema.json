@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.careerpilot.ai/api/job-list.v1.schema.json",
+  "x-generated-from": "job_discovery_service.schemas.JobList (scripts/export-contracts.py)",
+  "$defs": {
+    "JobSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "company_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Company Id"
+        },
+        "company_name": {
+          "title": "Company Name",
+          "type": "string"
+        },
+        "source_type": {
+          "title": "Source Type",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Url"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Location"
+        },
+        "remote": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Remote"
+        },
+        "employment_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Employment Type"
+        },
+        "department": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Department"
+        },
+        "posted_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Posted At"
+        },
+        "first_seen_at": {
+          "format": "date-time",
+          "title": "First Seen At",
+          "type": "string"
+        },
+        "listing_status": {
+          "$ref": "#/$defs/ListingStatus"
+        },
+        "duplicate_of_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Duplicate Of Id"
+        },
+        "is_new": {
+          "title": "Is New",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "company_id",
+        "company_name",
+        "source_type",
+        "title",
+        "url",
+        "location",
+        "remote",
+        "employment_type",
+        "department",
+        "posted_at",
+        "first_seen_at",
+        "listing_status",
+        "duplicate_of_id",
+        "is_new"
+      ],
+      "title": "JobSummary",
+      "type": "object"
+    },
+    "ListingStatus": {
+      "enum": [
+        "active",
+        "no_longer_listed"
+      ],
+      "title": "ListingStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "jobs": {
+      "items": {
+        "$ref": "#/$defs/JobSummary"
+      },
+      "title": "Jobs",
+      "type": "array"
+    },
+    "total": {
+      "title": "Total",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "jobs",
+    "total"
+  ],
+  "title": "JobList",
+  "type": "object"
+}

@@ -13,8 +13,12 @@ import {
   documentSchema,
   factValueSchemas,
   healthResponseSchema,
+  jobListSchema,
+  jobSchema,
   loginFormSchema,
   registerFormSchema,
+  searchRunListSchema,
+  searchRunSchema,
   tokenResponseSchema,
   userSchema,
 } from "./index";
@@ -229,5 +233,22 @@ describe("company contracts", () => {
     ["", false],
   ])("connector slug %s -> %s", (slug, ok) => {
     expect(connectorSlugSchema.safeParse(slug).success).toBe(ok);
+  });
+});
+
+describe("job discovery contracts", () => {
+  it.each([
+    ["search-run.json", searchRunSchema],
+    ["search-run-list.json", searchRunListSchema],
+    ["job.json", jobSchema],
+    ["job-list.json", jobListSchema],
+  ] as const)("accepts shared contract example %s", (file, schema) => {
+    expect(schema.safeParse(example(file)).error?.issues ?? []).toEqual([]);
+  });
+
+  it("never accepts a non-https job link", () => {
+    for (const url of ["javascript:alert(1)", "http://acme.com/job", "data:text/html,x"]) {
+      expect(jobSchema.safeParse({ ...example("job.json"), url }).success).toBe(false);
+    }
   });
 });

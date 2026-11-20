@@ -91,6 +91,25 @@
 - URL validation happens at entry; DNS-rebinding and redirect protection belong to the Phase 5 fetcher (ADR-021).
 - Company events (`company.*`) are not published yet; Phase 5 will read companies through this service's API or add events when a consumer exists.
 
+## Implemented (Phase 5: job discovery)
+
+| Control | Where | Verified by |
+|---|---|---|
+| Outbound requests connect only to public addresses (checked after DNS resolution, on every connection and redirect); private, loopback, link-local/metadata, CGNAT, multicast, reserved and IPv4-mapped forms refused | `job_discovery_service/fetcher.py` | `test_fetcher.py` (scripted DNS + sockets: nothing is ever connected), live `test_job_import_cannot_reach_internal_addresses` (container refuses `localhost`, `169.254.169.254`, `company-service`, `postgres`), Playwright metadata-IP import |
+| https only on every hop, max 3 redirects, 5 MB streaming cap, timeouts, per-host pacing, fixed User-Agent without user data | `fetcher.py` | `test_fetcher.py` |
+| robots.txt honoured for crawled pages (RFC 9309: missing = allowed, server error = disallowed) | `fetcher.allowed_by_robots` | `test_robots_txt_disallow_is_honoured`, `test_missing_robots_allows_but_a_broken_one_does_not` |
+| Only official public job-board APIs and schema.org data; no logins, no LinkedIn | `connectors.py` | review; fixtures checked once against real boards |
+| Job descriptions stored and shown as plain text; script/style dropped, bidi overrides removed | `normalize.py`, `JobsPage` | `test_html_to_text`, UI test "shows job text as plain text" (no `img`/`script` element created) |
+| Only https job links are accepted from sources and opened | `normalize.py`, Zod `jobSchema`, `useOpenExternal` | `test_non_https_job_links_are_dropped`, validation tests |
+| Searches: one at a time per user, 60 s cooldown, 50 sources and 500 jobs per source | `service.start_search` | integration tests |
+| Isolation: runs and jobs scoped by `user_id`; Company Service read with the caller's token | service, ADR-026 | `test_users_never_see_each_others_searches_or_jobs` |
+
+### Known limitations (Phase 5)
+
+- Lever's EU-hosted boards (`api.eu.lever.co`) are not queried yet.
+- Careers pages without schema.org `JobPosting` data yield no jobs (by design; no HTML scraping).
+- Job text will reach LLMs in Phase 6: it must be passed as delimited, untrusted data.
+
 ## Rules for upcoming phases
 
 - **Approval gates (Phase 8)** are enforced in the Approval/Application services, never in clients. Submission requires a valid, non-revoked final approval for the *current* `package_version`; any package change invalidates it.
